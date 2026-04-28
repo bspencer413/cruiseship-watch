@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.7';
+const APP_VERSION = '0.1.8';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -908,29 +908,57 @@ function App() {
       var hasDob = !!(nw.birthYear && nw.birthYear.trim());
       const wikiResult = await fetchWikiProfile(name).catch(() => ({ isDisambiguation: false, notFound: true }));
       var profile = wikiResult || { isDisambiguation: false, notFound: true };
+      var typedLower = name.toLowerCase();
       var fleetLineKey = findCruiseLineKey(nw.middle);
+      var fleetMatches = [];
       if (fleetLineKey) {
-        var typedLower = name.toLowerCase();
         var fleetShips = FLEET_DATA[fleetLineKey].ships;
-        var matchedFleetShip = null;
         for (var fi = 0; fi < fleetShips.length; fi++) {
-          if (fleetShips[fi].toLowerCase() === typedLower) { matchedFleetShip = fleetShips[fi]; break; }
+          if (fleetShips[fi].toLowerCase() === typedLower) { fleetMatches.push({ lineKey: fleetLineKey, ship: fleetShips[fi] }); break; }
         }
-        if (matchedFleetShip && (profile.notFound || profile.isDisambiguation)) {
-          profile = {
-            title: matchedFleetShip,
-            isFleetMatch: true,
-            lineKey: fleetLineKey,
-            cruiseType: FLEET_DATA[fleetLineKey].type,
-            extract: 'A ' + FLEET_DATA[fleetLineKey].type.toLowerCase() + ' cruise ship operated by ' + fleetLineKey + '.',
-            description: fleetLineKey + ' (' + FLEET_DATA[fleetLineKey].type + ')',
-            thumbnail: null,
-            birthDate: null,
-            deathDate: null,
-            isDisambiguation: false,
-            notFound: false
-          };
+      } else {
+        var lineKeys = Object.keys(FLEET_DATA);
+        for (var lki = 0; lki < lineKeys.length; lki++) {
+          var ships = FLEET_DATA[lineKeys[lki]].ships;
+          for (var si = 0; si < ships.length; si++) {
+            if (ships[si].toLowerCase() === typedLower) { fleetMatches.push({ lineKey: lineKeys[lki], ship: ships[si] }); }
+          }
         }
+      }
+      if (fleetMatches.length === 1 && (profile.notFound || profile.isDisambiguation)) {
+        var fmSingle = fleetMatches[0];
+        profile = {
+          title: fmSingle.ship,
+          isFleetMatch: true,
+          lineKey: fmSingle.lineKey,
+          cruiseType: FLEET_DATA[fmSingle.lineKey].type,
+          extract: 'A ' + FLEET_DATA[fmSingle.lineKey].type.toLowerCase() + ' cruise ship operated by ' + fmSingle.lineKey + '.',
+          description: fmSingle.lineKey + ' (' + FLEET_DATA[fmSingle.lineKey].type + ')',
+          thumbnail: null,
+          birthDate: null,
+          deathDate: null,
+          isDisambiguation: false,
+          notFound: false
+        };
+      } else if (fleetMatches.length > 1 && (profile.notFound || profile.isDisambiguation)) {
+        profile = {
+          isDisambiguation: true,
+          title: name,
+          notFound: false,
+          matches: fleetMatches.map(function(fm) {
+            return {
+              title: fm.ship,
+              description: fm.lineKey,
+              extract: 'A ' + FLEET_DATA[fm.lineKey].type.toLowerCase() + ' cruise ship operated by ' + fm.lineKey + '.',
+              thumbnail: null,
+              birthDate: null,
+              deathDate: null,
+              isFleetMatch: true,
+              lineKey: fm.lineKey,
+              cruiseType: FLEET_DATA[fm.lineKey].type
+            };
+          })
+        };
       }
       const isWikiDeceased = !!(profile && profile.deathDate);
       const titleHasQualifier = profile && profile.title && /\(.*\)/.test(profile.title);
