@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.11';
+const APP_VERSION = '0.1.13';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -612,6 +612,11 @@ function App() {
 
   const clearWatchlistCheck = () => {
     setWatchlistCheck(null); setWatchlistChecked(false);
+    setSelectedDisambig(null); setSsdiPage(1); setSsdiDrawer(null);
+  };
+
+  const resetSearch = () => {
+    setWatchlistCheck(null); setWatchlistChecked(false);
     setNw({ name: '', middle: '', suffix: '', location: '', birthYear: '' });
     setShowMoreFields(false);
     setSelectedDisambig(null); setSsdiPage(1); setSsdiDrawer(null);
@@ -837,7 +842,7 @@ function App() {
         body: JSON.stringify({ name: fullName, location: nw.location || '', dob: birthYear, is_deceased: isDeceased, death_year: deathYear })
       });
       if (!resp.ok) throw new Error('Failed');
-      await loadWatchlist(); clearWatchlistCheck(); setSsdiDrawer(null);
+      await loadWatchlist(); resetSearch(); setSsdiDrawer(null);
       setPage(isDeceased ? 'memories' : 'watchlist');
     } catch(e) { alert('Error: ' + e.message); }
     finally { setLoading(false); }
@@ -905,20 +910,21 @@ function App() {
       var typedLower = name.toLowerCase();
       var fleetLineKey = findCruiseLineKey(nw.middle);
       var fleetMatches = [];
-      if (fleetLineKey) {
-        var fleetShips = FLEET_DATA[fleetLineKey].ships;
-        for (var fi = 0; fi < fleetShips.length; fi++) {
-          if (fleetShips[fi].toLowerCase() === typedLower) { fleetMatches.push({ lineKey: fleetLineKey, ship: fleetShips[fi] }); break; }
-        }
-      } else {
-        var lineKeys = Object.keys(FLEET_DATA);
-        for (var lki = 0; lki < lineKeys.length; lki++) {
-          var ships = FLEET_DATA[lineKeys[lki]].ships;
-          for (var si = 0; si < ships.length; si++) {
-            if (ships[si].toLowerCase() === typedLower) { fleetMatches.push({ lineKey: lineKeys[lki], ship: ships[si] }); }
+      var searchKeys = fleetLineKey ? [fleetLineKey] : Object.keys(FLEET_DATA);
+      for (var lki = 0; lki < searchKeys.length; lki++) {
+        var lk = searchKeys[lki];
+        var ships = FLEET_DATA[lk].ships;
+        for (var si = 0; si < ships.length; si++) {
+          var shipLower = ships[si].toLowerCase();
+          if (shipLower === typedLower) {
+            fleetMatches.unshift({ lineKey: lk, ship: ships[si], exact: true });
+          } else if (shipLower.indexOf(typedLower) !== -1 && typedLower.length >= 3) {
+            fleetMatches.push({ lineKey: lk, ship: ships[si], exact: false });
           }
         }
       }
+      var hasExact = fleetMatches.length > 0 && fleetMatches[0].exact;
+      if (hasExact) fleetMatches = fleetMatches.filter(function(fm) { return fm.exact; });
       if (fleetMatches.length === 1 && (profile.notFound || profile.isDisambiguation)) {
         var fmSingle = fleetMatches[0];
         profile = {
@@ -934,18 +940,18 @@ function App() {
           isDisambiguation: false,
           notFound: false
         };
-      } else if (fleetMatches.length === 1) {
+      } else if (fleetMatches.length === 1 && hasExact) {
         var fmAugment = fleetMatches[0];
         profile.isFleetMatch = true;
         profile.lineKey = fmAugment.lineKey;
         profile.cruiseType = FLEET_DATA[fmAugment.lineKey].type;
         profile.title = fmAugment.ship;
-      } else if (fleetMatches.length > 1 && (profile.notFound || profile.isDisambiguation)) {
+      } else if (fleetMatches.length > 1) {
         profile = {
           isDisambiguation: true,
           title: name,
           notFound: false,
-          matches: fleetMatches.map(function(fm) {
+          matches: fleetMatches.slice(0, 8).map(function(fm) {
             return {
               title: fm.ship,
               description: fm.lineKey,
@@ -1008,7 +1014,7 @@ function App() {
         body: JSON.stringify({ name: addName, location: nw.location, dob: addDob, is_deceased: isLikelyDeceased, death_year: deathYr })
       });
       if (!r.ok) throw new Error('Failed');
-      await loadWatchlist(); clearWatchlistCheck();
+      await loadWatchlist(); resetSearch();
       setPage(isLikelyDeceased ? 'memories' : 'watchlist');
     } catch (error) { alert('Error: ' + error.message); }
     finally { setLoadingWl(false); }
@@ -1027,7 +1033,7 @@ function App() {
         body: JSON.stringify({ name: fullName, location: nw.location, dob: nw.birthYear })
       });
       if (!r.ok) throw new Error('Failed');
-      await loadWatchlist(); clearWatchlistCheck(); setPage('watchlist');
+      await loadWatchlist(); resetSearch(); setPage('watchlist');
     } catch (error) { alert('Error: ' + error.message); }
     finally { setLoadingWl(false); }
   };
@@ -1050,7 +1056,7 @@ function App() {
         body: JSON.stringify({ name: fullName, location: nw.location, dob: nw.birthYear, is_deceased: true, death_year: deathYr })
       });
       if (!r.ok) throw new Error('Failed');
-      await loadWatchlist(); clearWatchlistCheck(); setPage('memories');
+      await loadWatchlist(); resetSearch(); setPage('memories');
     } catch (error) { alert('Error: ' + error.message); }
     finally { setLoadingMem(false); }
   };
@@ -1347,7 +1353,7 @@ function App() {
                       const token = localStorage.getItem('cw_token');
                       const r = await fetch(API_BASE + '/watchlist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ name: selectedDisambig.title, location: '', dob: selectedDisambig.birthDate ? extractYear(selectedDisambig.birthDate) : '', is_deceased: true, death_year: extractYear(selectedDisambig.deathDate) }) });
                       if (!r.ok) throw new Error('Failed');
-                      await loadWatchlist(); clearWatchlistCheck(); setPage('memories');
+                      await loadWatchlist(); resetSearch(); setPage('memories');
                     } catch(e) { alert('Error: ' + e.message); }
                     finally { setLoadingMem(false); }
                   }} disabled={loadingMem} className="w-full py-4 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white rounded-xl font-bold text-2xl flex items-center justify-center gap-2 disabled:opacity-50">
@@ -1360,7 +1366,7 @@ function App() {
                       const token = localStorage.getItem('cw_token');
                       const r = await fetch(API_BASE + '/watchlist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ name: selectedDisambig.title, location: '', dob: selectedDisambig.birthDate ? extractYear(selectedDisambig.birthDate) : '' }) });
                       if (!r.ok) throw new Error('Failed');
-                      await loadWatchlist(); clearWatchlistCheck(); setPage('watchlist');
+                      await loadWatchlist(); resetSearch(); setPage('watchlist');
                     } catch(e) { alert('Error: ' + e.message); }
                     finally { setLoadingWl(false); }
                   }} disabled={loadingWl} className="w-full py-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-bold text-2xl flex items-center justify-center gap-2 disabled:opacity-50">
@@ -1369,7 +1375,7 @@ function App() {
                 )}
                 <button onClick={() => setSelectedDisambig(null)} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center flex items-center justify-center gap-2"><EditIcon /> Back to list</button>
                 <button onClick={() => { setWatchlistChecked(false); setWatchlistCheck(null); setSelectedDisambig(null); setSsdiPage(1); window.scrollTo(0,0); }} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center flex items-center justify-center gap-2"><EditIcon /> Edit Name</button>
-                <button onClick={clearWatchlistCheck} className="w-full py-2 text-white/40 text-xl text-center">Search for another name</button>
+                <button onClick={resetSearch} className="w-full py-2 text-white/40 text-xl text-center">Search for another name</button>
               </div>
             </div>
           </div>
@@ -1431,7 +1437,7 @@ function App() {
             {nw.birthYear && <div className="mb-2 p-2 bg-gray-800/40 border border-gray-700/30 rounded-lg"><p className="text-gray-400 text-xs">Year built helps narrow down ships with similar names.</p></div>}
             <div className="space-y-2 mt-3">
               <button onClick={() => { setWatchlistChecked(false); setWatchlistCheck(null); setSelectedDisambig(null); setSsdiPage(1); window.scrollTo(0,0); }} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center flex items-center justify-center gap-2"><EditIcon /> Edit Name</button>
-              <button onClick={clearWatchlistCheck} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center">Search for another name</button>
+              <button onClick={resetSearch} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center">Search for another name</button>
             </div>
           </div>
         </div>
@@ -1483,7 +1489,7 @@ function App() {
               <button onClick={() => { setWatchlistChecked(false); setWatchlistCheck(null); setSelectedDisambig(null); setSsdiPage(1); window.scrollTo(0,0); }} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center flex items-center justify-center gap-2">
                 <EditIcon /> Edit Name
               </button>
-              <button onClick={clearWatchlistCheck} className="w-full py-2 text-white/40 text-xl text-center">Search for another name</button>
+              <button onClick={resetSearch} className="w-full py-2 text-white/40 text-xl text-center">Search for another name</button>
             </div>
           )}
           {isWikiDeceased && (
@@ -1503,7 +1509,7 @@ function App() {
                         const token = localStorage.getItem('cw_token');
                         const r = await fetch(API_BASE + '/watchlist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ name: profile.title, location: '', dob: '', is_deceased: true, death_year: extractYear(profile.deathDate) }) });
                         if (!r.ok) throw new Error('Failed');
-                        await loadWatchlist(); clearWatchlistCheck(); setPage('memories');
+                        await loadWatchlist(); resetSearch(); setPage('memories');
                       } catch(e) { alert('Error: ' + e.message); }
                       finally { setLoadingMem(false); }
                     }} disabled={loadingMem} className="w-full py-4 bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white rounded-xl font-bold text-2xl flex items-center justify-center gap-2 disabled:opacity-50">
@@ -1514,7 +1520,7 @@ function App() {
                 <button onClick={() => { setWatchlistChecked(false); setWatchlistCheck(null); setSelectedDisambig(null); setSsdiPage(1); window.scrollTo(0,0); }} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center flex items-center justify-center gap-2">
                   <EditIcon /> Edit Name
                 </button>
-                <button onClick={clearWatchlistCheck} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center">Search for another name</button>
+                <button onClick={resetSearch} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center">Search for another name</button>
               </div>
             </>
           )}
@@ -1556,7 +1562,7 @@ function App() {
               <button onClick={() => { setWatchlistChecked(false); setWatchlistCheck(null); setSelectedDisambig(null); setSsdiPage(1); window.scrollTo(0,0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center flex items-center justify-center gap-2">
                 <EditIcon /> Edit Name
               </button>
-              <button onClick={clearWatchlistCheck} className="w-full py-2 text-white/40 text-xl text-center">Search for another name</button>
+              <button onClick={resetSearch} className="w-full py-2 text-white/40 text-xl text-center">Search for another name</button>
             </div>
           )}
         </div>
@@ -1829,14 +1835,16 @@ function App() {
           </div>
         )}
 
-        {page === 'search' && (
-          <div className="space-y-3" style={{ paddingTop: PT }}>
-            <div className="flex flex-col items-center justify-center" style={{ height: PT, marginTop: '-' + PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none' }}>
-              <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: 'auto', height: 'calc(' + PT + ' - 2.5rem)', maxWidth: '95%', objectFit: 'contain', filter: 'drop-shadow(0 6px 24px rgba(8,145,178,0.9)) brightness(2.0)' }} />
+        {page === 'search' && (() => {
+          var SEARCH_PT = isPhone ? '55vh' : isTablet ? '50vh' : '48vh';
+          return (
+          <div className="space-y-3" style={{ paddingTop: SEARCH_PT }}>
+            <div className="flex flex-col items-center justify-center" style={{ height: SEARCH_PT, marginTop: '-' + SEARCH_PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none' }}>
+              <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: 'auto', height: 'calc(' + SEARCH_PT + ' - 4rem)', maxWidth: '95%', objectFit: 'contain', filter: 'drop-shadow(0 6px 24px rgba(8,145,178,0.9)) brightness(2.0)' }} />
               <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '2.2rem' : '2.6rem', whiteSpace: 'nowrap', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.4rem' }}>Smooth sailing for...</p>
               <p className="text-cyan-200 text-center" style={{ fontSize: isPhone ? '1.2rem' : '1.4rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', marginTop: '0.3rem' }}>Inspections, outbreaks, and travel advisories</p>
             </div>
-            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + PT + ' - 6rem)' }}>
+            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 6rem)' }}>
               <div className="mb-1 pb-1 border-b border-cyan-900/30" />
               {watchlistChecking && <p className="text-white text-center py-4 animate-pulse text-xl">Searching...</p>}
               {!watchlistChecked ? (
@@ -1909,7 +1917,8 @@ function App() {
               )}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {page === 'memories' && (
           <div className="space-y-3" style={{ paddingTop: "1rem" }}>
