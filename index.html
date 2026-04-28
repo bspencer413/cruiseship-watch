@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.13';
+const APP_VERSION = '0.1.14';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -752,7 +752,36 @@ function App() {
       setDrawerRefreshing(false);
       return;
     }
-    const wikiProfile = await fetchWikiAction(nameWithPeriods).catch(() => ({ notFound: true })) || { notFound: true };
+    var wikiProfile = await fetchWikiAction(nameWithPeriods).catch(() => ({ notFound: true })) || { notFound: true };
+    if (wikiProfile.isDisambiguation || wikiProfile.notFound) {
+      var savedNameLower = watchItem.name.toLowerCase();
+      var matchedLineKey = null, matchedShip = null;
+      var fleetKeys = Object.keys(FLEET_DATA);
+      for (var fki = 0; fki < fleetKeys.length; fki++) {
+        var fleetShipsArr = FLEET_DATA[fleetKeys[fki]].ships;
+        for (var fsi = 0; fsi < fleetShipsArr.length; fsi++) {
+          if (fleetShipsArr[fsi].toLowerCase() === savedNameLower) {
+            matchedLineKey = fleetKeys[fki]; matchedShip = fleetShipsArr[fsi]; break;
+          }
+        }
+        if (matchedLineKey) break;
+      }
+      if (matchedLineKey) {
+        wikiProfile = {
+          title: matchedShip,
+          isFleetMatch: true,
+          lineKey: matchedLineKey,
+          cruiseType: FLEET_DATA[matchedLineKey].type,
+          extract: 'A ' + FLEET_DATA[matchedLineKey].type.toLowerCase() + ' cruise ship operated by ' + matchedLineKey + '.',
+          description: matchedLineKey + ' (' + FLEET_DATA[matchedLineKey].type + ')',
+          thumbnail: null,
+          birthDate: null,
+          deathDate: null,
+          isDisambiguation: false,
+          notFound: false
+        };
+      }
+    }
     var ssdiResults = [];
     if (watchItem.dob) {
       var nameParts2 = watchItem.name.trim().split(/\s+/);
@@ -1860,30 +1889,13 @@ function App() {
                   </button>
                   {!showMoreFields && (
                     <>
-                      <button onClick={() => setShowMoreFields(true)} className="w-full py-2 bg-gray-800/60 border border-cyan-900/30 text-cyan-400 text-xl text-center rounded-lg">Add more details (optional)</button>
+                      <button onClick={() => setShowMoreFields(true)} className="w-full py-2 bg-gray-800/60 border border-cyan-900/30 text-cyan-400 text-xl text-center rounded-lg">Add more details</button>
                       <p className="text-cyan-300/70 text-sm text-center -mt-1">For State Dept advisory alerts, add a Region in details.</p>
                     </>
                   )}
                   {showMoreFields && (
                     <>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          placeholder="Cruise Line (optional)"
-                          value={nw.middle || ''}
-                          onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }}
-                          onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }}
-                          onKeyPress={(e) => e.key === 'Enter' && checkWatch()}
-                          className={iClass + ' pr-10'}
-                          autoCorrect="off"
-                          autoCapitalize="words"
-                          autoComplete="off"
-                          spellCheck="false"
-                        />
-                        {nw.middle && nw.middle.length > 0 && (
-                          <button onClick={() => setNw(Object.assign({}, nw, { middle: '' }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xl font-bold leading-none" type="button">X</button>
-                        )}
-                      </div>
+                      <ClearableInput value={nw.middle} onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }} onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Cruise Line" inputClass={iClass} />
                       <div className="relative">
                         <select
                           value={nw.location || ''}
