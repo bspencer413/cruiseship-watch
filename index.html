@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.5';
+const APP_VERSION = '0.1.6';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -907,7 +907,31 @@ function App() {
       var hasMi = !!(nw.middle && nw.middle.trim());
       var hasDob = !!(nw.birthYear && nw.birthYear.trim());
       const wikiResult = await fetchWikiProfile(name).catch(() => ({ isDisambiguation: false, notFound: true }));
-      const profile = wikiResult || { isDisambiguation: false, notFound: true };
+      var profile = wikiResult || { isDisambiguation: false, notFound: true };
+      var fleetLineKey = findCruiseLineKey(nw.middle);
+      if (fleetLineKey) {
+        var typedLower = name.toLowerCase();
+        var fleetShips = FLEET_DATA[fleetLineKey].ships;
+        var matchedFleetShip = null;
+        for (var fi = 0; fi < fleetShips.length; fi++) {
+          if (fleetShips[fi].toLowerCase() === typedLower) { matchedFleetShip = fleetShips[fi]; break; }
+        }
+        if (matchedFleetShip && (profile.notFound || profile.isDisambiguation)) {
+          profile = {
+            title: matchedFleetShip,
+            isFleetMatch: true,
+            lineKey: fleetLineKey,
+            cruiseType: FLEET_DATA[fleetLineKey].type,
+            extract: 'A ' + FLEET_DATA[fleetLineKey].type.toLowerCase() + ' cruise ship operated by ' + fleetLineKey + '.',
+            description: fleetLineKey + ' (' + FLEET_DATA[fleetLineKey].type + ')',
+            thumbnail: null,
+            birthDate: null,
+            deathDate: null,
+            isDisambiguation: false,
+            notFound: false
+          };
+        }
+      }
       const isWikiDeceased = !!(profile && profile.deathDate);
       const titleHasQualifier = profile && profile.title && /\(.*\)/.test(profile.title);
       if (!isWikiDeceased || titleHasQualifier) {
@@ -1231,6 +1255,7 @@ function App() {
     } : { isDisambiguation: false, notFound: true, title: '', extract: '', matches: [] };
 
     const wikiMatchConfident = (() => {
+      if (profile && profile.isFleetMatch) return true;
       if (!profile || profile.notFound || profile.isDisambiguation || !profile.title) return false;
       if (/\(.*\)/.test(profile.title)) return false;
       const titleWords = profile.title.toLowerCase().split(/\s+/);
@@ -1322,8 +1347,16 @@ function App() {
       return (
         <div className="rounded-2xl overflow-hidden border border-cyan-800 shadow-lg">
           {(() => {
-              const miF = (nw.middle || '').trim().toLowerCase().replace(/\./g, '');
-              const fM = miF ? (profile.matches || []).filter(m => m.title && m.title.toLowerCase().includes(' ' + miF.charAt(0))) : (profile.matches || []);
+              const cruiseLineInput2 = (nw.middle || '').trim().toLowerCase();
+              const allMatches2 = profile.matches || [];
+              var fM = allMatches2;
+              if (cruiseLineInput2 && allMatches2.length > 0) {
+                const m2 = allMatches2.filter(m => {
+                  const text = ((m.extract || '') + ' ' + (m.description || '') + ' ' + (m.title || '')).toLowerCase();
+                  return text.indexOf(cruiseLineInput2) !== -1;
+                });
+                if (m2.length > 0) fM = m2;
+              }
               const noResults = fM.length === 0 && ssdiResults.length === 0;
               return noResults ? (
                 <div className="px-5 py-3 bg-blue-700 text-center"><p className="text-white font-black text-3xl">No Matches Found</p><p className="text-white/80 text-xl">Try different details below.</p></div>
@@ -1333,10 +1366,16 @@ function App() {
             })()}
           <div className="bg-gray-900/70 p-4">
             {(() => {
-              const miFilter = (nw.middle || '').trim().toLowerCase().replace(/\./g, '');
-              const filteredMatches = miFilter
-                ? (profile.matches || []).filter(m => m.title && m.title.toLowerCase().includes(' ' + miFilter.charAt(0)))
-                : (profile.matches || []);
+              const cruiseLineInput = (nw.middle || '').trim().toLowerCase();
+              const allMatches = profile.matches || [];
+              var filteredMatches = allMatches;
+              if (cruiseLineInput && allMatches.length > 0) {
+                const matchesWithLine = allMatches.filter(m => {
+                  const text = ((m.extract || '') + ' ' + (m.description || '') + ' ' + (m.title || '')).toLowerCase();
+                  return text.indexOf(cruiseLineInput) !== -1;
+                });
+                if (matchesWithLine.length > 0) filteredMatches = matchesWithLine;
+              }
               return filteredMatches.length > 0 ? (
                 <div className="space-y-2 mb-3">
                   {filteredMatches.map((m, i) => (
@@ -1352,13 +1391,8 @@ function App() {
                     </button>
                   ))}
                 </div>
-              ) : miFilter ? (
-                <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg">
-                  <p className="text-yellow-300 text-sm font-bold">No Wikipedia matches with that detail.</p>
-                  <p className="text-yellow-200 text-xs mt-1">Showing SSDI records below.</p>
-                </div>
               ) : (
-                <p className="text-gray-400 text-xl text-center py-3 mb-2">No Wikipedia matches found. Try adding the cruise line.</p>
+                <p className="text-gray-400 text-xl text-center py-3 mb-2">No Wikipedia matches found.</p>
               );
             })()}
             <SSIDResultsBlock ssdiResults={ssdiResults} searchFirst={searchFirst} searchMiddle={nw.middle} searchLast={searchLast} searchBirthYear={nw.birthYear} searchSuffix={nw.suffix} apiHasMore={watchlistCheck && watchlistCheck.ssdiHasMore} onLoadMore={loadMoreSsdiSearch} birthYearFallback={watchlistCheck && watchlistCheck.birthYearFallback} />
