@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.10';
+const APP_VERSION = '0.1.11';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -412,15 +412,9 @@ const PageWrapper = ({ children, bgStyle }) => {
 
 function isDeceasedCheck(extract, description, deathDate, type) {
   if (type === 'disambiguation') return false;
-  if (deathDate) return true;
-  const firstSentence = extract ? extract.split('.')[0] : '';
-  const hasDeathInBrackets = /\(\d{4}\s*[-\u2013\u2014]+\s*\d{4}\)/.test(firstSentence);
-  const hasBornOnly = /\([^)]*born\s+\w+\s+\d+,\s+\d{4}\)/.test(firstSentence) || /\([^)]*born\s+\d{4}\)/.test(firstSentence);
-  if (hasBornOnly) return false;
-  const isPastTense = /^[^.]*\bwas (an?|the)\b[^.]*\./.test(extract) && !/\([^)]*born/.test(firstSentence) && !/born\s+\d{4}/.test(description) && !/\b(serves|serving|since|has served|has been|retired)\b/i.test(extract);
-  const diedInFirstSentence = /\b(died|passed away|deceased)\b/i.test(firstSentence);
-  const diedInDescription = /\b(died|passed away|deceased)\b/i.test(description);
-  return hasDeathInBrackets || isPastTense || diedInFirstSentence || diedInDescription;
+  const text = ((extract || '') + ' ' + (description || '')).toLowerCase();
+  if (/\b(scrapped|broken up|sold for scrap|sent to .{0,30}breakers|wrecked|sunk|sank|capsized|decommissioned|retired from service|withdrawn from service)\b/.test(text)) return true;
+  return false;
 }
 
 const SsdiRecordBlock = ({ r }) => {
@@ -673,16 +667,13 @@ function App() {
         const months = 'January|February|March|April|May|June|July|August|September|October|November|December';
         const dateMatches = extract.match(new RegExp('(?:' + months + ') [0-9]{1,2}, [0-9]{4}', 'g'));
         if (dateMatches && dateMatches.length >= 2) deathDate = dateMatches[dateMatches.length - 1];
-        else if (dateMatches && dateMatches.length === 1 && /died|passed|\u2013|\u2014/.test(extract.split('.')[0])) deathDate = dateMatches[0];
       }
-      if (deathDate && !deathFromCategory) {
+      if (deathDate) {
         const yr = parseInt(extractYear(deathDate) || '0');
         if (!yr || yr < 1900 || yr > 2030) deathDate = null;
       }
-      const isLikelyAlive = /\b(serving|serves|since|current|retired)\b/i.test(description) || /\bretired\b/i.test(extract) || /chief justice|associate justice/i.test(description) || (/\bborn\b/i.test(extract.split('.')[0]) && !/\(\d{4}[-\u2013\u2014]+\d{4}\)/.test(description));
-      if (isLikelyAlive) deathDate = null;
-      const deceased = (deathFromCategory && !isLikelyAlive) || (!!deathDate && !isLikelyAlive) || (!isLikelyAlive && isDeceasedCheck(extract, description, deathDate, 'standard'));
-      return { title, extract, thumbnail, birthDate, deathDate: deceased ? (deathDate || 'deceased') : null, description, isDisambiguation: false, deathFromCategory };
+      const deceased = isDeceasedCheck(extract, description, deathDate, 'standard');
+      return { title, extract, thumbnail, birthDate, deathDate: deceased ? (deathDate || 'retired') : null, description, isDisambiguation: false };
     } catch(e) { return null; }
   };
 
@@ -1436,7 +1427,7 @@ function App() {
               );
             })()}
             <SSIDResultsBlock ssdiResults={ssdiResults} searchFirst={searchFirst} searchMiddle={nw.middle} searchLast={searchLast} searchBirthYear={nw.birthYear} searchSuffix={nw.suffix} apiHasMore={watchlistCheck && watchlistCheck.ssdiHasMore} onLoadMore={loadMoreSsdiSearch} birthYearFallback={watchlistCheck && watchlistCheck.birthYearFallback} />
-            {ssdiResults.length === 0 && (nw.middle || nw.birthYear) && <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg"><p className="text-yellow-300 text-sm font-bold">No exact matches found.</p><p className="text-yellow-200 text-xs mt-1">Try different details, or add the ship anyway.</p></div>}
+            {ssdiResults.length === 0 && (nw.middle || nw.birthYear) && null}
             {nw.birthYear && <div className="mb-2 p-2 bg-gray-800/40 border border-gray-700/30 rounded-lg"><p className="text-gray-400 text-xs">Year built helps narrow down ships with similar names.</p></div>}
             <div className="space-y-2 mt-3">
               <button onClick={() => { setWatchlistChecked(false); setWatchlistCheck(null); setSelectedDisambig(null); setSsdiPage(1); window.scrollTo(0,0); }} className="w-full py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl text-xl text-center flex items-center justify-center gap-2"><EditIcon /> Edit Name</button>
@@ -1473,13 +1464,13 @@ function App() {
               <p className="text-yellow-300 text-sm">Wikipedia found a "{profile.title}" but details don't fully match. Public records may help narrow it down.</p>
             </div>
           )}
-          {!isWikiDeceased && !wikiMatchConfident && noMiMatches && (
+          {false && !isWikiDeceased && !wikiMatchConfident && noMiMatches && (
             <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg">
               <p className="text-yellow-300 text-sm font-bold">No exact matches found.</p>
               <p className="text-yellow-200 text-xs mt-1">Try different details, or add the ship anyway. You can still add this ship to your Watchlist.</p>
             </div>
           )}
-          {!notFound && !wikiMatchConfident && !isWikiDeceased && (nw.middle || nw.birthYear) && !hasSSdi && <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg"><p className="text-yellow-300 text-sm font-bold">No exact SSDI matches for those details.</p><p className="text-yellow-200 text-xs mt-1">Try different details, or add the ship anyway.</p></div>}
+          {false && !notFound && !wikiMatchConfident && !isWikiDeceased && (nw.middle || nw.birthYear) && !hasSSdi && <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg"><p className="text-yellow-300 text-sm font-bold">No exact SSDI matches for those details.</p><p className="text-yellow-200 text-xs mt-1">Try different details, or add the ship anyway.</p></div>}
           {(!wikiMatchConfident || isWikiDeceased) && <SSIDResultsBlock ssdiResults={ssdiResults} searchFirst={searchFirst} searchMiddle={nw.middle} searchLast={searchLast} searchBirthYear={nw.birthYear} searchSuffix={nw.suffix} apiHasMore={watchlistCheck && watchlistCheck.ssdiHasMore} onLoadMore={loadMoreSsdiSearch} birthYearFallback={watchlistCheck && watchlistCheck.birthYearFallback} />}
           {ssdiDeceased && !isWikiDeceased && !wikiMatchConfident && (
             <div className="space-y-2 mt-2 border-t border-white/10 pt-2">
@@ -1543,13 +1534,11 @@ function App() {
                       <button onClick={() => checkWatch(shipSuggestion.ship)} className="w-full py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-2xl font-bold">{shipSuggestion.ship}?</button>
                       <p className="text-gray-400 text-sm text-center mt-2">{shipSuggestion.lineKey} fleet</p>
                     </div>
-                  ) : nw.middle ? (
-                    <div className="mb-3 p-3 bg-yellow-900/20 border border-yellow-700/30 rounded-lg">
-                      <p className="text-yellow-300 text-sm font-bold">No matches found for {buildFullName()}.</p>
-                      <p className="text-yellow-200 text-xs mt-1">Try a different spelling, or add the ship anyway.</p>
-                    </div>
                   ) : (
-                    <p className="text-gray-300 text-lg leading-relaxed text-center">No records found for {buildFullName()} at this time. Try adding the cruise line.</p>
+                    <div className="mb-3 px-2 py-3">
+                      <p className="text-gray-200 text-xl text-center mb-2">No match for <span className="text-white font-bold">{buildFullName()}</span>.</p>
+                      <p className="text-cyan-300 text-lg text-center">Try checking the spelling{!nw.middle ? ', or add the cruise line below' : ''}.</p>
+                    </div>
                   )}
                   {fullNameStatus
                     ? <p className="w-full py-3 text-center text-green-400 text-2xl font-bold">Already in your {fullNameStatus}</p>
@@ -1758,11 +1747,11 @@ function App() {
 
   if (page === 'login') {
     return (
-      <div style={{ minHeight: '100dvh', width: '100%', backgroundColor: POSTER_STYLE.backgroundColor, backgroundImage: POSTER_STYLE.backgroundImage, backgroundSize: POSTER_STYLE.backgroundSize, backgroundPosition: POSTER_STYLE.backgroundPosition, backgroundRepeat: POSTER_STYLE.backgroundRepeat, backgroundAttachment: POSTER_STYLE.backgroundAttachment, display: 'flex', flexDirection: 'column', alignItems: 'stretch', paddingBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 58vh' }}>
-          <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '88vw', height: '54vh', objectFit: 'contain', filter: 'brightness(2.0) drop-shadow(0 6px 24px rgba(8,145,178,0.8))' }} />
+      <div style={{ minHeight: '100dvh', width: '100%', backgroundColor: POSTER_STYLE.backgroundColor, backgroundImage: POSTER_STYLE.backgroundImage, backgroundSize: POSTER_STYLE.backgroundSize, backgroundPosition: POSTER_STYLE.backgroundPosition, backgroundRepeat: POSTER_STYLE.backgroundRepeat, backgroundAttachment: POSTER_STYLE.backgroundAttachment, display: 'flex', flexDirection: 'column', alignItems: 'stretch', paddingBottom: '4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minHeight: '40vh' }}>
+          <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '88vw', height: '38vh', objectFit: 'contain', filter: 'brightness(2.0) drop-shadow(0 6px 24px rgba(8,145,178,0.8))' }} />
         </div>
-        <div style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+        <div style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '2rem' }}>
           <div className="bg-cyan-950/80 backdrop-blur-sm rounded-2xl p-4 shadow-2xl border border-cyan-600/40 space-y-3">
             <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && doAuth('login')} className="w-full px-4 py-3 rounded-xl bg-white/15 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xl" />
             <div className="relative">
@@ -1844,8 +1833,8 @@ function App() {
           <div className="space-y-3" style={{ paddingTop: PT }}>
             <div className="flex flex-col items-center justify-center" style={{ height: PT, marginTop: '-' + PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none' }}>
               <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: 'auto', height: 'calc(' + PT + ' - 2.5rem)', maxWidth: '95%', objectFit: 'contain', filter: 'drop-shadow(0 6px 24px rgba(8,145,178,0.9)) brightness(2.0)' }} />
-              <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '1.6rem' : '2.2rem', whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.8)', marginTop: '0.4rem' }}>Smooth sailing for...</p>
-              <p className="text-cyan-200 text-center" style={{ fontSize: isPhone ? '1.0rem' : '1.2rem', textShadow: '0 1px 4px rgba(0,0,0,0.8)', marginTop: '0.2rem' }}>Inspections, outbreaks, and travel advisories</p>
+              <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '2.2rem' : '2.6rem', whiteSpace: 'nowrap', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.4rem' }}>Smooth sailing for...</p>
+              <p className="text-cyan-200 text-center" style={{ fontSize: isPhone ? '1.2rem' : '1.4rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', marginTop: '0.3rem' }}>Inspections, outbreaks, and travel advisories</p>
             </div>
             <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + PT + ' - 6rem)' }}>
               <div className="mb-1 pb-1 border-b border-cyan-900/30" />
@@ -1869,7 +1858,24 @@ function App() {
                   )}
                   {showMoreFields && (
                     <>
-                      <ClearableInput value={nw.middle} onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }} onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Cruise Line (optional)" inputClass={iClass} />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Cruise Line (optional)"
+                          value={nw.middle || ''}
+                          onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }}
+                          onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }}
+                          onKeyPress={(e) => e.key === 'Enter' && checkWatch()}
+                          className={iClass + ' pr-10'}
+                          autoCorrect="off"
+                          autoCapitalize="words"
+                          autoComplete="off"
+                          spellCheck="false"
+                        />
+                        {nw.middle && nw.middle.length > 0 && (
+                          <button onClick={() => setNw(Object.assign({}, nw, { middle: '' }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xl font-bold leading-none" type="button">X</button>
+                        )}
+                      </div>
                       <div className="relative">
                         <select
                           value={nw.location || ''}
