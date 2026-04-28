@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.3';
+const APP_VERSION = '0.1.5';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -691,20 +691,22 @@ function App() {
       const url = 'https://en.wikipedia.org/w/api.php?action=parse&page=' + encodeURIComponent(title) + '&prop=links&format=json&origin=*';
       const data = await (await fetch(url)).json();
       const links = (data.parse && data.parse.links) ? data.parse.links : [];
-      const personLinks = links.filter(l => l.ns === 0 && l['*'] && l['*'].length > 2).map(l => l['*']).slice(0, 20);
+      const candidateLinks = links.filter(l => l.ns === 0 && l['*'] && l['*'].length > 2).map(l => l['*']).slice(0, 25);
       const results = [];
-      const titleParts = title.trim().split(/\s+/);
-      const searchLastName = titleParts[titleParts.length - 1].toUpperCase();
-      for (const link of personLinks) {
+      const searchLower = title.trim().toLowerCase();
+      for (const link of candidateLinks) {
         const profile = await fetchWikiAction(link);
         if (!profile || profile.isDisambiguation || !profile.extract) continue;
-        const linkLastName = profile.title ? profile.title.trim().split(/\s+/).pop().toUpperCase() : '';
-        if (searchLastName.length > 2 && linkLastName !== searchLastName) continue;
+        if (searchLower && (profile.title || '').toLowerCase().indexOf(searchLower) === -1) continue;
+        const titleStr = profile.title || '';
         const desc = (profile.description || '').toLowerCase();
         const extract = (profile.extract || '').toLowerCase();
-        const looksLikePerson = profile.birthDate || profile.deathDate ||
-          /\b(born|died|american|british|politician|actor|actress|singer|musician|athlete|author|writer|director|businessman|scientist|lawyer|doctor|physician|soldier|general|president|senator|governor|mayor)\b/.test(desc + ' ' + extract);
-        if (!looksLikePerson) continue;
+        var isShip = false;
+        if (/^(MS |MV |SS |RMS |HMS |HMCS |HMNZS |USNS |USS |M\/S |M\/V |S\/S )/.test(titleStr)) isShip = true;
+        else if (/\b(cruise ship|ocean liner|cruise liner|ferry|river vessel|expedition ship|cargo ship|container ship|tanker|warship|destroyer|frigate|submarine|aircraft carrier|sailing ship|tall ship|passenger ship|naval vessel|cruise vessel|cruise line)\b/.test(desc)) isShip = true;
+        else if (/\b(launched in \d|maiden voyage|gross tonnage|sister ship|drydock|christened)\b/.test(extract)) isShip = true;
+        else if ((/\bvessel\b/.test(desc) || /\bship\b/.test(desc)) && !/(spaceship|airship|relationship|township|workmanship|championship|leadership|membership|partnership|blood vessel)/.test(desc)) isShip = true;
+        if (!isShip) continue;
         results.push(profile);
         if (results.length >= 6) break;
       }
@@ -883,8 +885,9 @@ function App() {
 
   const checkWatch = async (overrideName) => {
     if (document.activeElement) document.activeElement.blur();
-    const sourceName = overrideName || nw.name || '';
-    if (overrideName) setNw(Object.assign({}, nw, { name: overrideName }));
+    const isOverride = typeof overrideName === 'string' && overrideName.trim().length > 0;
+    const sourceName = isOverride ? overrideName : (nw.name || '');
+    if (isOverride) setNw(Object.assign({}, nw, { name: overrideName }));
     const name = smartTitleCase(sourceName.trim().replace(/\s+/g, ' '));
     if (!name || name.length < 2) { alert('Please enter a name to search.'); return; }
     setSsdiDrawer(null); setSsdiPage(1);
@@ -1781,7 +1784,7 @@ function App() {
                     const capped = words.map((w, i) => i < words.length - 1 ? toTitleCase(w) : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
                     setNw(Object.assign({}, nw, { name: capped }));
                   }} onBlur={(e) => setNw(Object.assign({}, nw, { name: smartTitleCase(e.target.value.trim()) }))} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Ship Name (e.g., Scarlet Lady)" inputClass={iClass} />
-                  <button id="cw-search-btn" onFocus={() => { setTimeout(() => { var el = document.getElementById('cw-search-btn'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); }} onClick={checkWatch} disabled={watchlistChecking} className="w-full py-3 bg-cyan-600 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 text-2xl font-bold">
+                  <button id="cw-search-btn" onFocus={() => { setTimeout(() => { var el = document.getElementById('cw-search-btn'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); }} onClick={() => checkWatch()} disabled={watchlistChecking} className="w-full py-3 bg-cyan-600 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 text-2xl font-bold">
                     <SearchIcon /> {watchlistChecking ? 'Searching...' : 'Find Out'}
                   </button>
                   {!showMoreFields && (
