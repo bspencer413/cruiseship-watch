@@ -13,13 +13,13 @@
   <meta name="robots" content="index, follow">
   <meta name="author" content="Cruise Ship Watch">
   <link rel="canonical" href="https://cruiseship.watch">
-  <meta property="og:title" content="Cruise Ship Watch — Smooth sailing for...">
+  <meta property="og:title" content="Cruise Ship Watch — Watch Your Cruise Ship...">
   <meta property="og:description" content="Add ships to your watchlist. Get notified about travel advisories and sea-state alerts.">
   <meta property="og:url" content="https://cruiseship.watch">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Cruise Ship Watch — Smooth sailing for...">
+  <meta name="twitter:title" content="Cruise Ship Watch — Watch Your Cruise Ship...">
   <meta name="twitter:description" content="Add ships to your watchlist. Get notified about advisories and sea-state alerts.">
   <meta name="twitter:image" content="https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png">
   <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIkNydWlzZSBTaGlwIFdhdGNoIiwgInNob3J0X25hbWUiOiAiQ1ciLCAic3RhcnRfdXJsIjogIi8iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzBhMWEyZSIsICJ0aGVtZV9jb2xvciI6ICIjMDg5MWIyIiwgImljb25zIjogW3sic3JjIjogImh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS9ic3BlbmNlcjQxMy9jcnVpc2VzaGlwLXdhdGNoL21haW4vY3dfaWNvbi5wbmciLCAic2l6ZXMiOiAiNTEyeDUxMiIsICJ0eXBlIjogImltYWdlL3BuZyJ9XX0=">
@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.27';
+const APP_VERSION = '0.1.29';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -1997,14 +1997,17 @@ function App() {
   if (page === 'login') {
     return (
       <div style={{ minHeight: '100dvh', width: '100%', backgroundColor: POSTER_STYLE.backgroundColor, backgroundImage: POSTER_STYLE.backgroundImage, backgroundSize: POSTER_STYLE.backgroundSize, backgroundPosition: POSTER_STYLE.backgroundPosition, backgroundRepeat: POSTER_STYLE.backgroundRepeat, backgroundAttachment: POSTER_STYLE.backgroundAttachment, display: 'flex', flexDirection: 'column', alignItems: 'stretch', paddingBottom: '4rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minHeight: '40vh' }}>
-          <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '88vw', height: '38vh', objectFit: 'contain', filter: 'brightness(2.0) drop-shadow(0 6px 24px rgba(8,145,178,0.8))' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minHeight: '38vh', paddingTop: '2rem' }}>
+          <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '78vw', height: '26vh', objectFit: 'contain', filter: 'brightness(2.0) drop-shadow(0 6px 24px rgba(8,145,178,0.9))' }} />
+          <h1 className="text-white font-black text-center tracking-tight" style={{ fontSize: isPhone ? '2.6rem' : '3.2rem', textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 24px rgba(0,0,0,0.85)', marginTop: '0.6rem', lineHeight: '1' }}>Cruise Ship Watch</h1>
+          <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '1.7rem' : '2rem', whiteSpace: 'nowrap', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.4rem' }}>Watch Your Cruise Ship...</p>
+          <p className="text-cyan-100 text-center px-6" style={{ fontSize: isPhone ? '1.25rem' : '1.4rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', marginTop: '0.5rem', lineHeight: '1.3' }}>Travel advisories and sea-state alerts for the ships you care about.</p>
         </div>
         <div style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '2rem' }}>
-          <div className="bg-cyan-950/80 backdrop-blur-sm rounded-2xl p-4 shadow-2xl border border-cyan-600/40 space-y-3">
-            <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && doAuth('login')} className="w-full px-4 py-3 rounded-xl bg-white/15 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xl" />
+          <div className="rounded-2xl p-4 shadow-2xl border border-cyan-400/50 space-y-3" style={{ backgroundColor: 'rgba(20,42,76,0.85)', backdropFilter: 'blur(8px)' }}>
+            <input id="cw-login-email" type="email" name="cw-login-email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} onFocus={(e) => { setTimeout(() => { e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); }} onKeyPress={(e) => e.key === 'Enter' && doAuth('login')} autoComplete="email" autoCorrect="off" autoCapitalize="off" spellCheck="false" className="w-full px-4 py-3 rounded-xl bg-white/15 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xl" />
             <div className="relative">
-              <input type={showPassword ? 'text' : 'password'} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && doAuth('login')} className="w-full px-4 py-3 rounded-xl bg-white/15 border border-white/30 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xl" />
+              <input id="cw-login-password" type={showPassword ? 'text' : 'password'} name="cw-login-password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} onFocus={(e) => { setTimeout(() => { e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); }} onKeyPress={(e) => e.key === 'Enter' && doAuth('login')} autoComplete="current-password" autoCorrect="off" autoCapitalize="off" spellCheck="false" className="w-full px-4 py-3 rounded-xl bg-white/15 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-xl" />
               <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60">{showPassword ? <EyeOffIcon /> : <EyeIcon />}</button>
             </div>
             {backendWaking && <p className="text-white/60 text-xl text-center animate-pulse">Waking up the server...</p>}
@@ -2012,7 +2015,7 @@ function App() {
               <button onClick={() => doAuth('login')} disabled={loading} className="py-4 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl disabled:opacity-50 text-2xl">{loading ? '...' : 'Sign In'}</button>
               <button onClick={() => doAuth('register')} disabled={loading} className="py-4 bg-cyan-900/60 hover:bg-cyan-800/80 text-white font-bold rounded-xl disabled:opacity-50 text-2xl border border-cyan-400/60">{loading ? '...' : 'Register'}</button>
             </div>
-            <p className="text-white/40 text-xl text-center">You'll stay signed in automatically</p>
+            <p className="text-white/50 text-base text-center">You'll stay signed in automatically</p>
           </div>
         </div>
       </div>
@@ -2079,17 +2082,17 @@ function App() {
         )}
 
         {page === 'search' && (() => {
-          var SEARCH_PT = isPhone ? '28vh' : isTablet ? '32vh' : '34vh';
+          var SEARCH_PT = isPhone ? '33vh' : isTablet ? '34vh' : '36vh';
           return (
           <div className="space-y-3" style={{ paddingTop: SEARCH_PT, paddingBottom: '7rem' }}>
             <div className="flex flex-col items-center justify-center" style={{ height: SEARCH_PT, marginTop: '-' + SEARCH_PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none' }}>
               <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: 'auto', height: 'calc(' + SEARCH_PT + ' - 4rem)', maxWidth: '95%', objectFit: 'contain', filter: 'drop-shadow(0 6px 24px rgba(8,145,178,0.9)) brightness(2.0)' }} />
-              <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '2.2rem' : '2.6rem', whiteSpace: 'nowrap', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.4rem' }}>Smooth sailing for...</p>
+              <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '2.2rem' : '2.6rem', whiteSpace: 'nowrap', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.4rem' }}>Watch Your Cruise Ship...</p>
             </div>
             {!watchlistChecked && !watchlistChecking && (
-              <p className="text-cyan-200 text-center px-2" style={{ fontSize: isPhone ? '1.55rem' : '1.75rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', lineHeight: '1.25' }}>Enter the Ship, Line and Cruise Region, then tap <span className="font-bold">Find My Ship</span>.</p>
+              <p className="text-cyan-200 text-center px-2" style={{ fontSize: isPhone ? '1.55rem' : '1.75rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', lineHeight: '1.25' }}>Enter the Ship, Cruise Line and Region, then tap <span className="font-bold">Find My Ship</span>.</p>
             )}
-            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 12rem)', backgroundColor: 'rgba(12,30,58,0.55)' }}>
+            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 12rem)', backgroundColor: 'rgba(20,42,76,0.78)' }}>
               <div className="mb-1 pb-1 border-b border-cyan-900/30" />
               {watchlistChecking && <p className="text-white text-center py-4 animate-pulse text-xl">Searching...</p>}
               {!watchlistChecked ? (
@@ -2108,7 +2111,7 @@ function App() {
                       className={iClass + ' pr-10 cursor-pointer'}
                       style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none', color: nw.location ? '#ffffff' : '#9ca3af' }}
                     >
-                      <option value="" style={{ color: '#9ca3af', backgroundColor: '#0c1e3a' }}>Region</option>
+                      <option value="" style={{ color: '#9ca3af', backgroundColor: '#0c1e3a' }}>Cruise Region</option>
                       <option value="Alaska" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Alaska</option>
                       <option value="Caribbean" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Caribbean</option>
                       <option value="Mediterranean" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Mediterranean</option>
@@ -2126,7 +2129,7 @@ function App() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
-                  <p className="text-cyan-300/80 text-lg text-center">Partial names accepted</p>
+                  <p className="text-cyan-300/90 text-xl text-center font-medium">Partial names accepted</p>
                   <button id="cw-search-btn" onFocus={() => { setTimeout(() => { var el = document.getElementById('cw-search-btn'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); }} onClick={() => checkWatch()} disabled={watchlistChecking} className="w-full py-3 bg-cyan-600 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 text-2xl font-bold">
                     <SearchIcon /> {watchlistChecking ? 'Searching...' : 'Find My Ship'}
                   </button>
@@ -2255,7 +2258,7 @@ function App() {
                   <a href="mailto:hello@cruiseship.watch" className="text-cyan-400 text-xl mt-1 block">hello@cruiseship.watch</a>
                 </div>
               </div>
-              <p className="text-cyan-200 text-2xl font-bold italic mb-3">Smooth sailing for...</p>
+              <p className="text-cyan-200 text-2xl font-bold italic mb-3">Watch Your Cruise Ship...</p>
               <div className="space-y-3 text-gray-200 text-xl leading-relaxed">
                 <p>Cruise ships you've sailed. Ships you're booked on. Ships you're curious about.</p>
                 <p>"Google it," they say. But cruise news is scattered, and the things that matter to cruisers -- travel advisories and sea-state alerts -- are buried.</p>
