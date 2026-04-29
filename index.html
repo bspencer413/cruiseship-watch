@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.26';
+const APP_VERSION = '0.1.27';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -1755,11 +1755,11 @@ function App() {
                                     var advKey = 'mem-' + (adv.country_code || idx);
                                     var clean = cleanAdvisoryText(adv.summary);
                                     var isExp = !!expandedAdvisorySummaries[advKey];
-                                    var trunc = truncateWords(clean, 250);
+                                    var trunc = truncateWords(clean, 120);
                                     var bodyText = isExp || !trunc.truncated ? clean : trunc.text;
                                     return (
                                       <>
-                                        <p className="text-white/95 text-base leading-relaxed mb-2 whitespace-pre-line">{bodyText}</p>
+                                        <p className="text-white text-lg leading-relaxed mb-2 whitespace-pre-line">{bodyText}</p>
                                         {trunc.truncated && (
                                           <button onClick={() => setExpandedAdvisorySummaries(Object.assign({}, expandedAdvisorySummaries, { [advKey]: !isExp }))} className="w-full py-2 mb-2 bg-white/10 border border-white/30 text-white rounded-lg text-base font-semibold">{isExp ? 'Show less' : 'Show more'}</button>
                                         )}
@@ -1890,11 +1890,11 @@ function App() {
                                     var advKey = 'wl-' + (adv.country_code || idx);
                                     var clean = cleanAdvisoryText(adv.summary);
                                     var isExp = !!expandedAdvisorySummaries[advKey];
-                                    var trunc = truncateWords(clean, 250);
+                                    var trunc = truncateWords(clean, 120);
                                     var bodyText = isExp || !trunc.truncated ? clean : trunc.text;
                                     return (
                                       <>
-                                        <p className="text-white/95 text-base leading-relaxed mb-2 whitespace-pre-line">{bodyText}</p>
+                                        <p className="text-white text-lg leading-relaxed mb-2 whitespace-pre-line">{bodyText}</p>
                                         {trunc.truncated && (
                                           <button onClick={() => setExpandedAdvisorySummaries(Object.assign({}, expandedAdvisorySummaries, { [advKey]: !isExp }))} className="w-full py-2 mb-2 bg-white/10 border border-white/30 text-white rounded-lg text-base font-semibold">{isExp ? 'Show less' : 'Show more'}</button>
                                         )}
@@ -2079,7 +2079,7 @@ function App() {
         )}
 
         {page === 'search' && (() => {
-          var SEARCH_PT = isPhone ? '42vh' : isTablet ? '40vh' : '38vh';
+          var SEARCH_PT = isPhone ? '28vh' : isTablet ? '32vh' : '34vh';
           return (
           <div className="space-y-3" style={{ paddingTop: SEARCH_PT, paddingBottom: '7rem' }}>
             <div className="flex flex-col items-center justify-center" style={{ height: SEARCH_PT, marginTop: '-' + SEARCH_PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none' }}>
@@ -2089,7 +2089,7 @@ function App() {
             {!watchlistChecked && !watchlistChecking && (
               <p className="text-cyan-200 text-center px-2" style={{ fontSize: isPhone ? '1.55rem' : '1.75rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', lineHeight: '1.25' }}>Enter the Ship, Line and Cruise Region, then tap <span className="font-bold">Find My Ship</span>.</p>
             )}
-            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 12rem)' }}>
+            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 12rem)', backgroundColor: 'rgba(12,30,58,0.55)' }}>
               <div className="mb-1 pb-1 border-b border-cyan-900/30" />
               {watchlistChecking && <p className="text-white text-center py-4 animate-pulse text-xl">Searching...</p>}
               {!watchlistChecked ? (
