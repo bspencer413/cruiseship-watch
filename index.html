@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.37';
+const APP_VERSION = '0.1.38';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -1997,9 +1997,9 @@ function App() {
   if (page === 'login') {
     return (
       <div style={{ minHeight: '100dvh', width: '100%', backgroundColor: POSTER_STYLE.backgroundColor, backgroundImage: POSTER_STYLE.backgroundImage, backgroundSize: POSTER_STYLE.backgroundSize, backgroundPosition: POSTER_STYLE.backgroundPosition, backgroundRepeat: POSTER_STYLE.backgroundRepeat, backgroundAttachment: POSTER_STYLE.backgroundAttachment, display: 'flex', flexDirection: 'column', alignItems: 'stretch', paddingBottom: '4rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minHeight: '38vh', paddingTop: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', flex: '1 1 auto', minHeight: '50vh', paddingTop: '2rem', paddingBottom: '1.5rem' }}>
           <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '78vw', height: '26vh', objectFit: 'contain', filter: 'brightness(2.0) drop-shadow(0 6px 24px rgba(8,145,178,0.9))' }} />
-          <h1 className="text-cyan-300 font-black text-center tracking-tight" style={{ fontSize: isPhone ? '4.6rem' : '5.5rem', textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 28px rgba(0,0,0,0.85)', marginTop: '0.8rem', lineHeight: '1' }}>Cruise<br />Ship<br />Watch</h1>
+          <h1 className="text-cyan-300 font-black text-center tracking-tight" style={{ fontSize: isPhone ? '5.5rem' : '6.5rem', textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 28px rgba(0,0,0,0.85)', marginTop: '1rem', lineHeight: '1' }}>Cruise<br />Ship<br />Watch</h1>
         </div>
         <div style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '2rem' }}>
           <div className="rounded-2xl p-4 shadow-2xl border border-cyan-400/50 space-y-3" style={{ backgroundColor: 'rgba(20,42,76,0.85)', backdropFilter: 'blur(8px)' }}>
@@ -2083,9 +2083,9 @@ function App() {
           var SEARCH_PT = isPhone ? '33vh' : isTablet ? '34vh' : '36vh';
           return (
           <div className="space-y-3" style={{ paddingTop: SEARCH_PT, paddingBottom: '7rem' }}>
-            <div className="flex flex-col items-center justify-start" style={{ minHeight: SEARCH_PT, marginTop: '-' + SEARCH_PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none', overflow: 'visible' }}>
+            <div className="flex flex-col items-center justify-end" style={{ minHeight: SEARCH_PT, marginTop: '-' + SEARCH_PT, paddingTop: '0.5rem', paddingBottom: '1rem', pointerEvents: 'none', overflow: 'visible' }}>
               <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: 'auto', height: 'calc(' + SEARCH_PT + ' - 4rem)', maxWidth: '95%', objectFit: 'contain', filter: 'drop-shadow(0 6px 24px rgba(8,145,178,0.9)) brightness(2.0)' }} />
-              <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '3rem' : '3.4rem', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.5rem', lineHeight: '1.05' }}>Watch Your<br />Cruise Ship...</p>
+              <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '4rem' : '4.5rem', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.5rem', lineHeight: '1.05' }}>Watch Your<br />Cruise Ship...</p>
             </div>
             {!watchlistChecked && !watchlistChecking && null}
             <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 8rem)', backgroundColor: 'rgba(20,42,76,0.78)' }}>
