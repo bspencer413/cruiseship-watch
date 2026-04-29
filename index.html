@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.18';
+const APP_VERSION = '0.1.19';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -772,7 +772,12 @@ function App() {
         }
       }
       const cachedSsdi = getCachedSsdiFlexible(watchItem.name);
-      setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: memProfile, ssdiResults: [], loading: false, newlyDeceased: false, isMemory: true, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: cachedSsdi, location: watchItem.location || null, advisories: [] });
+      var memAdvisories = [];
+      try {
+        const advResp = await fetch(API_BASE + '/watchlist/' + watchItem.id + '/advisories', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (advResp.ok) { const advData = await advResp.json(); memAdvisories = Array.isArray(advData) ? advData : (advData && advData.advisories) || []; }
+      } catch(e) {}
+      setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: memProfile, ssdiResults: [], loading: false, newlyDeceased: false, isMemory: true, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: cachedSsdi, location: watchItem.location || null, advisories: memAdvisories });
       setDrawerRefreshing(false);
       return;
     }
@@ -1688,6 +1693,31 @@ function App() {
                       <p className="text-white font-black text-3xl">{name}</p>
                       <p className="text-white/80 text-xl">{deathYear ? 'Retired' : 'Saved'}</p>
                     </div>
+                    {advisories && advisories.length > 0 && advisories.map(function(adv, idx) {
+                      const ls = advisoryLevelStyle(adv.level);
+                      const chips = parseRiskChips(adv);
+                      return (
+                        <div key={'memadv-' + idx} className="rounded-xl mb-3 overflow-hidden border-2" style={{ borderColor: ls.border, backgroundColor: ls.cardBg }}>
+                          <div className="px-3 py-2 flex items-center justify-between" style={{ backgroundColor: ls.headerBg }}>
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-white font-bold text-xl leading-tight truncate">{adv.country_name || adv.country_code || 'Advisory'}</p>
+                              <p className="text-white/80 text-xs">{ls.label}</p>
+                            </div>
+                            <span className="text-white font-black text-3xl shrink-0">L{adv.level}</span>
+                          </div>
+                          <div className="p-3">
+                            {adv.title && <p className="text-white text-base font-semibold mb-2">{adv.title}</p>}
+                            {chips.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {chips.map(function(chip, i) { return <span key={'mc-' + i} className="px-2 py-0.5 rounded-full text-xs bg-black/40 text-white border border-white/20">{chip}</span>; })}
+                              </div>
+                            )}
+                            {adv.summary && <p className="text-white/90 text-sm leading-relaxed mb-2 whitespace-pre-line">{String(adv.summary).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}</p>}
+                            {adv.url && <a href={adv.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline">Read full advisory at travel.state.gov</a>}
+                          </div>
+                        </div>
+                      );
+                    })}
                     {(() => {
                       var savedLower = name.trim().toLowerCase();
                       var wikiLower = (profile && profile.title || '').trim().toLowerCase();
@@ -1757,7 +1787,7 @@ function App() {
                                 {chips.map(function(chip, i) { return <span key={'c-' + i} className="px-2 py-0.5 rounded-full text-xs bg-black/40 text-white border border-white/20">{chip}</span>; })}
                               </div>
                             )}
-                            {adv.summary && <p className="text-white/90 text-sm leading-relaxed mb-2 whitespace-pre-line">{adv.summary}</p>}
+                            {adv.summary && <p className="text-white/90 text-sm leading-relaxed mb-2 whitespace-pre-line">{String(adv.summary).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}</p>}
                             {adv.url && <a href={adv.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline">Read full advisory at travel.state.gov</a>}
                           </div>
                         </div>
