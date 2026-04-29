@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.31';
+const APP_VERSION = '0.1.32';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -1999,7 +1999,7 @@ function App() {
       <div style={{ minHeight: '100dvh', width: '100%', backgroundColor: POSTER_STYLE.backgroundColor, backgroundImage: POSTER_STYLE.backgroundImage, backgroundSize: POSTER_STYLE.backgroundSize, backgroundPosition: POSTER_STYLE.backgroundPosition, backgroundRepeat: POSTER_STYLE.backgroundRepeat, backgroundAttachment: POSTER_STYLE.backgroundAttachment, display: 'flex', flexDirection: 'column', alignItems: 'stretch', paddingBottom: '4rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minHeight: '38vh', paddingTop: '2rem' }}>
           <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: '78vw', height: '26vh', objectFit: 'contain', filter: 'brightness(2.0) drop-shadow(0 6px 24px rgba(8,145,178,0.9))' }} />
-          <h1 className="text-cyan-300 font-black text-center tracking-tight" style={{ fontSize: isPhone ? '3.6rem' : '4.4rem', textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 28px rgba(0,0,0,0.85)', marginTop: isPhone ? '5rem' : '6rem', lineHeight: '1' }}>Cruise Ship Watch</h1>
+          <h1 className="text-cyan-300 font-black text-center tracking-tight" style={{ fontSize: isPhone ? '4.6rem' : '5.5rem', textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 28px rgba(0,0,0,0.85)', marginTop: isPhone ? '9rem' : '10rem', lineHeight: '1' }}>Cruise Ship Watch</h1>
         </div>
         <div style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingBottom: '2rem' }}>
           <div className="rounded-2xl p-4 shadow-2xl border border-cyan-400/50 space-y-3" style={{ backgroundColor: 'rgba(20,42,76,0.85)', backdropFilter: 'blur(8px)' }}>
