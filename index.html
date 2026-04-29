@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.16';
+const APP_VERSION = '0.1.17';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -746,14 +746,38 @@ function App() {
     }
     const nameWithPeriods = addInitialPeriods(watchItem.name.trim());
     if (isMemory) {
-      const profile = await fetchWikiAction(nameWithPeriods).catch(() => ({ notFound: true }));
+      var memProfile = await fetchWikiAction(nameWithPeriods).catch(() => ({ notFound: true })) || { notFound: true };
+      if (memProfile.isDisambiguation || memProfile.notFound || memProfile.deathDate) {
+        var memSavedLower = watchItem.name.toLowerCase();
+        var memLineKey = null, memShip = null;
+        var memFleetKeys = Object.keys(FLEET_DATA);
+        for (var mki = 0; mki < memFleetKeys.length; mki++) {
+          var memShipsArr = FLEET_DATA[memFleetKeys[mki]].ships;
+          for (var msi = 0; msi < memShipsArr.length; msi++) {
+            if (memShipsArr[msi].toLowerCase() === memSavedLower) {
+              memLineKey = memFleetKeys[mki]; memShip = memShipsArr[msi]; break;
+            }
+          }
+          if (memLineKey) break;
+        }
+        if (memLineKey) {
+          memProfile = {
+            title: memShip, isFleetMatch: true, lineKey: memLineKey,
+            cruiseType: FLEET_DATA[memLineKey].type,
+            extract: 'A ' + FLEET_DATA[memLineKey].type.toLowerCase() + ' cruise ship operated by ' + memLineKey + '.',
+            description: memLineKey + ' (' + FLEET_DATA[memLineKey].type + ')',
+            thumbnail: null, birthDate: null, deathDate: null,
+            isDisambiguation: false, notFound: false
+          };
+        }
+      }
       const cachedSsdi = getCachedSsdiFlexible(watchItem.name);
-      setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: profile || { notFound: true }, ssdiResults: [], loading: false, newlyDeceased: false, isMemory: true, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: cachedSsdi, location: watchItem.location || null, advisories: [] });
+      setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: memProfile, ssdiResults: [], loading: false, newlyDeceased: false, isMemory: true, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: cachedSsdi, location: watchItem.location || null, advisories: [] });
       setDrawerRefreshing(false);
       return;
     }
     var wikiProfile = await fetchWikiAction(nameWithPeriods).catch(() => ({ notFound: true })) || { notFound: true };
-    if (wikiProfile.isDisambiguation || wikiProfile.notFound) {
+    if (wikiProfile.isDisambiguation || wikiProfile.notFound || wikiProfile.deathDate) {
       var savedNameLower = watchItem.name.toLowerCase();
       var matchedLineKey = null, matchedShip = null;
       var fleetKeys = Object.keys(FLEET_DATA);
