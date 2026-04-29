@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.20';
+const APP_VERSION = '0.1.21';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -2020,22 +2020,48 @@ function App() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {notifications.map(n => (
-                    <div key={n.id} className="p-3 bg-cyan-950/50 border border-cyan-800 rounded-xl">
-                      <h3 className="font-bold text-white text-xl mb-1">{n.name}</h3>
-                      <p className="text-gray-300 text-xl">{n.message}</p>
-                      <p className="text-gray-500 text-xl mt-1 mb-2">{new Date(n.created_at).toLocaleDateString()}</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => viewAlert(n)} className="flex-1 py-2 bg-cyan-700/50 border border-cyan-600/50 text-white rounded-lg text-xl font-bold">View</button>
-                        <button onClick={() => keepAlert(n.id, n.watchlist_id, n.name)} className="flex-1 py-2 bg-gray-700/50 border border-gray-600/50 text-gray-200 rounded-lg text-base font-bold">
-                          Keep<span className="block text-gray-400 text-xs font-normal leading-tight">Save to My Ships</span>
-                        </button>
-                        <button onClick={() => dismissAlert2(n.id, n.watchlist_id)} className="flex-1 py-2 bg-transparent border border-cyan-900/50 text-cyan-400 rounded-lg text-base">
-                          Dismiss<span className="block text-cyan-600 text-xs leading-tight">Remove All</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                  {(() => {
+                    var groups = {};
+                    var order = [];
+                    for (var ni = 0; ni < notifications.length; ni++) {
+                      var n = notifications[ni];
+                      var key = n.watchlist_id || ('name:' + n.name);
+                      if (!groups[key]) { groups[key] = { name: n.name, watchlist_id: n.watchlist_id, items: [], latest: n.created_at }; order.push(key); }
+                      groups[key].items.push(n);
+                      if (n.created_at > groups[key].latest) groups[key].latest = n.created_at;
+                    }
+                    return order.map(function(k) {
+                      var g = groups[k];
+                      var firstId = g.items[0].id;
+                      return (
+                        <div key={k} className="p-3 bg-cyan-950/50 border border-cyan-800 rounded-xl">
+                          <h3 className="font-bold text-white text-xl mb-1">{g.name}</h3>
+                          <p className="text-gray-300 text-base mb-1">{g.items.length} {g.items.length === 1 ? 'update' : 'updates'}</p>
+                          <ul className="mb-2 space-y-1">
+                            {g.items.slice(0, 5).map(function(item) {
+                              return <li key={item.id} className="text-gray-300 text-sm leading-snug">• {item.message}</li>;
+                            })}
+                            {g.items.length > 5 && <li className="text-gray-500 text-sm">+ {g.items.length - 5} more — tap View</li>}
+                          </ul>
+                          <p className="text-gray-500 text-xs mt-1 mb-2">{new Date(g.latest).toLocaleDateString()}</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => viewAlert(g.items[0])} className="flex-1 py-2 bg-cyan-700/50 border border-cyan-600/50 text-white rounded-lg text-xl font-bold">View</button>
+                            <button onClick={async () => {
+                              await keepAlert(firstId, g.watchlist_id, g.name);
+                              for (var di = 1; di < g.items.length; di++) { try { await dismissAlert2(g.items[di].id, g.watchlist_id); } catch(e) {} }
+                            }} className="flex-1 py-2 bg-gray-700/50 border border-gray-600/50 text-gray-200 rounded-lg text-base font-bold">
+                              Keep<span className="block text-gray-400 text-xs font-normal leading-tight">Save to My Ships</span>
+                            </button>
+                            <button onClick={async () => {
+                              for (var di = 0; di < g.items.length; di++) { try { await dismissAlert2(g.items[di].id, g.watchlist_id); } catch(e) {} }
+                            }} className="flex-1 py-2 bg-transparent border border-cyan-900/50 text-cyan-400 rounded-lg text-base">
+                              Dismiss<span className="block text-cyan-600 text-xs leading-tight">Remove All</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
