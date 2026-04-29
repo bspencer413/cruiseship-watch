@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.22';
+const APP_VERSION = '0.1.24';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -388,7 +388,7 @@ const ClearableInput = ({ value, onChange, onBlur, onKeyPress, placeholder, type
 const CardPageHeader = ({ title, subtitle }) => (
   <div className="mb-3 pb-2 border-b border-cyan-900/30 text-center">
     <h2 className="text-4xl font-black text-white tracking-wide">{title}</h2>
-    {subtitle && <p className="text-gray-300 text-xl mt-1">{subtitle}</p>}
+    {subtitle && <p className="text-gray-200 text-2xl mt-1">{subtitle}</p>}
   </div>
 );
 
@@ -451,6 +451,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [watchlist, setWatchlist] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [expandedAlertGroups, setExpandedAlertGroups] = useState({});
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
   const [wikiProfile, setWikiProfile] = useState(null);
@@ -1980,43 +1981,44 @@ function App() {
               <div className="mb-1 pb-1 border-b border-cyan-900/30" />
               {watchlistChecking && <p className="text-white text-center py-4 animate-pulse text-xl">Searching...</p>}
               {!watchlistChecked ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <ClearableInput value={nw.name} onChange={(e) => {
                     const val = e.target.value;
                     const words = val.split(' ');
                     const capped = words.map((w, i) => i < words.length - 1 ? toTitleCase(w) : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
                     setNw(Object.assign({}, nw, { name: capped }));
                   }} onBlur={(e) => setNw(Object.assign({}, nw, { name: smartTitleCase(e.target.value.trim()) }))} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Ship Name" inputClass={iClass} />
-                  <p className="text-cyan-300/70 text-xs text-center -mt-1">Partial names accepted</p>
-                  <ClearableInput value={nw.middle} onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }} onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Cruise Line (optional)" inputClass={iClass} />
+                  <ClearableInput value={nw.middle} onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }} onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Cruise Line" inputClass={iClass} />
                   <div className="relative">
                     <select
                       value={nw.location || ''}
                       onChange={(e) => setNw(Object.assign({}, nw, { location: e.target.value }))}
                       className={iClass + ' pr-10 cursor-pointer'}
-                      style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
+                      style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none', color: nw.location ? '#ffffff' : '#9ca3af' }}
                     >
-                      <option value="" style={{ color: '#9ca3af', backgroundColor: '#0c1e3a' }}>Region (for advisories & sea state)</option>
-                      <option value="Caribbean" style={{ backgroundColor: '#0c1e3a' }}>Caribbean</option>
-                      <option value="Mediterranean" style={{ backgroundColor: '#0c1e3a' }}>Mediterranean</option>
-                      <option value="North America" style={{ backgroundColor: '#0c1e3a' }}>North America</option>
-                      <option value="Northern Europe" style={{ backgroundColor: '#0c1e3a' }}>Northern Europe</option>
-                      <option value="Central America" style={{ backgroundColor: '#0c1e3a' }}>Central America</option>
-                      <option value="South America" style={{ backgroundColor: '#0c1e3a' }}>South America</option>
-                      <option value="Asia" style={{ backgroundColor: '#0c1e3a' }}>Asia</option>
-                      <option value="Oceania" style={{ backgroundColor: '#0c1e3a' }}>Oceania</option>
-                      <option value="Middle East" style={{ backgroundColor: '#0c1e3a' }}>Middle East</option>
-                      <option value="Africa" style={{ backgroundColor: '#0c1e3a' }}>Africa</option>
-                      <option value="Arctic" style={{ backgroundColor: '#0c1e3a' }}>Arctic</option>
+                      <option value="" style={{ color: '#9ca3af', backgroundColor: '#0c1e3a' }}>Region</option>
+                      <option value="Alaska" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Alaska</option>
+                      <option value="Caribbean" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Caribbean</option>
+                      <option value="Mediterranean" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Mediterranean</option>
+                      <option value="North America" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>North America</option>
+                      <option value="Northern Europe" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Northern Europe</option>
+                      <option value="Central America" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Central America</option>
+                      <option value="South America" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>South America</option>
+                      <option value="Asia" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Asia</option>
+                      <option value="Oceania" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Oceania</option>
+                      <option value="Middle East" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Middle East</option>
+                      <option value="Africa" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Africa</option>
+                      <option value="Arctic" style={{ color: '#ffffff', backgroundColor: '#0c1e3a' }}>Arctic</option>
                     </select>
                     <svg className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
+                  <p className="text-cyan-300/80 text-base text-center">Partial names accepted</p>
                   <button id="cw-search-btn" onFocus={() => { setTimeout(() => { var el = document.getElementById('cw-search-btn'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); }} onClick={() => checkWatch()} disabled={watchlistChecking} className="w-full py-3 bg-cyan-600 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 text-2xl font-bold">
                     <SearchIcon /> {watchlistChecking ? 'Searching...' : 'Find My Ship'}
                   </button>
-                  <p className="text-gray-400 text-sm text-center">We use authoritative sources: U.S. State Department, U.S. National Weather Service, and Wikipedia.</p>
+                  <p className="text-gray-300 text-base text-center leading-snug px-2">Authoritative sources: U.S. State Department, National Weather Service, and Wikipedia.</p>
                 </div>
               ) : (
                 <WatchlistCheckCard />
@@ -2029,14 +2031,13 @@ function App() {
         {page === 'memories' && (
           <div className="space-y-3" style={{ paddingTop: "1rem" }}>
             <div className={cardClass}>
-              <CardPageHeader title="My Ships" subtitle="Ships you have saved" />
+              <CardPageHeader title="My Ships" subtitle="Tap a ship for the latest" />
               {watchlist.filter(w => w.is_deceased).length === 0 ? (
                 <div className="text-center py-6">
                   <p className="text-gray-300 text-xl leading-relaxed">Search for a ship and save it here for future reference.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-gray-400 text-lg text-center mb-1">Tap a ship to see info</p>
                   {watchlist.filter(w => w.is_deceased).map(w => {
                     const confirmedDeceased = !!(w.death_year);
                     const statusText = confirmedDeceased ? ('Retired ' + w.death_year) : 'Saved';
@@ -2064,11 +2065,11 @@ function App() {
         {page === 'notifications' && (
           <div className="space-y-3" style={{ paddingTop: "1rem" }}>
             <div className={cardClass}>
-              <CardPageHeader title="Alerts" subtitle="News for ships you are watching" />
+              <CardPageHeader title="Alerts" subtitle="Latest info about your ships" />
               {notifications.length === 0 ? (
                 <div className="text-center py-4">
                   <p className="text-white font-bold text-2xl">No alerts yet</p>
-                  <p className="text-gray-200 text-xl mt-1">We'll alert you when there is news about a ship on your Watchlist</p>
+                  <p className="text-gray-200 text-xl mt-1">Look for the Alert Bell to show new alerts</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2085,17 +2086,23 @@ function App() {
                     return order.map(function(k) {
                       var g = groups[k];
                       var firstId = g.items[0].id;
+                      var isExpanded = !!expandedAlertGroups[k];
+                      var visibleItems = isExpanded ? g.items : g.items.slice(0, 1);
+                      var moreCount = g.items.length - 1;
                       return (
                         <div key={k} className="p-3 bg-cyan-950/50 border border-cyan-800 rounded-xl">
-                          <h3 className="font-bold text-white text-xl mb-1">{g.name}</h3>
-                          <p className="text-gray-300 text-base mb-1">{g.items.length} {g.items.length === 1 ? 'update' : 'updates'}</p>
+                          <h3 className="font-bold text-white text-2xl mb-1">{g.name}</h3>
                           <ul className="mb-2 space-y-1">
-                            {g.items.slice(0, 5).map(function(item) {
-                              return <li key={item.id} className="text-gray-300 text-sm leading-snug">• {item.message}</li>;
+                            {visibleItems.map(function(item) {
+                              return <li key={item.id} className="text-gray-200 text-base leading-snug">• {item.message}</li>;
                             })}
-                            {g.items.length > 5 && <li className="text-gray-500 text-sm">+ {g.items.length - 5} more — tap View</li>}
                           </ul>
-                          <p className="text-gray-500 text-xs mt-1 mb-2">{new Date(g.latest).toLocaleDateString()}</p>
+                          {moreCount > 0 && (
+                            <button onClick={() => setExpandedAlertGroups(Object.assign({}, expandedAlertGroups, { [k]: !isExpanded }))} className="text-cyan-300 text-base font-semibold underline decoration-dotted mb-2">
+                              {isExpanded ? 'Show less' : ('+ ' + moreCount + ' more high-level ' + (moreCount === 1 ? 'alert' : 'alerts'))}
+                            </button>
+                          )}
+                          <p className="text-gray-400 text-sm mt-1 mb-2">{new Date(g.latest).toLocaleDateString()}</p>
                           <div className="flex gap-2">
                             <button onClick={() => viewAlert(g.items[0])} className="flex-1 py-2 bg-cyan-700/50 border border-cyan-600/50 text-white rounded-lg text-xl font-bold">View</button>
                             <button onClick={async () => {
