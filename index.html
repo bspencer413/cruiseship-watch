@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.14';
+const APP_VERSION = '0.1.15';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -971,10 +971,27 @@ function App() {
         };
       } else if (fleetMatches.length === 1 && hasExact) {
         var fmAugment = fleetMatches[0];
-        profile.isFleetMatch = true;
-        profile.lineKey = fmAugment.lineKey;
-        profile.cruiseType = FLEET_DATA[fmAugment.lineKey].type;
-        profile.title = fmAugment.ship;
+        if (profile.deathDate) {
+          // Wikipedia found a retired ship with same name -- fleet has the current one, override
+          profile = {
+            title: fmAugment.ship,
+            isFleetMatch: true,
+            lineKey: fmAugment.lineKey,
+            cruiseType: FLEET_DATA[fmAugment.lineKey].type,
+            extract: 'A ' + FLEET_DATA[fmAugment.lineKey].type.toLowerCase() + ' cruise ship operated by ' + fmAugment.lineKey + '. (Wikipedia returned an older ship with the same name.)',
+            description: fmAugment.lineKey + ' (' + FLEET_DATA[fmAugment.lineKey].type + ')',
+            thumbnail: null,
+            birthDate: null,
+            deathDate: null,
+            isDisambiguation: false,
+            notFound: false
+          };
+        } else {
+          profile.isFleetMatch = true;
+          profile.lineKey = fmAugment.lineKey;
+          profile.cruiseType = FLEET_DATA[fmAugment.lineKey].type;
+          profile.title = fmAugment.ship;
+        }
       } else if (fleetMatches.length > 1) {
         profile = {
           isDisambiguation: true,
@@ -1865,7 +1882,7 @@ function App() {
         )}
 
         {page === 'search' && (() => {
-          var SEARCH_PT = isPhone ? '55vh' : isTablet ? '50vh' : '48vh';
+          var SEARCH_PT = isPhone ? '42vh' : isTablet ? '40vh' : '38vh';
           return (
           <div className="space-y-3" style={{ paddingTop: SEARCH_PT }}>
             <div className="flex flex-col items-center justify-center" style={{ height: SEARCH_PT, marginTop: '-' + SEARCH_PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none' }}>
