@@ -8,19 +8,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Cruise Ship Watch">
   <title>Cruise Ship Watch</title>
-  <meta name="description" content="Cruise Ship Watch — Stay informed about cruise ships you care about. Get notified about CDC inspections, outbreaks, and travel advisories.">
-  <meta name="keywords" content="cruise ship watch, cruise inspections, vessel sanitation, cruise advisories, ship outbreaks, cruise alerts, CDC VSP, travel advisory">
+  <meta name="description" content="Cruise Ship Watch — Stay informed about cruise ships you care about. Get notified about travel advisories and sea-state alerts.">
+  <meta name="keywords" content="cruise ship watch, cruise advisories, cruise alerts, travel advisory, sea state, marine forecast">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Cruise Ship Watch">
   <link rel="canonical" href="https://cruiseship.watch">
-  <meta property="og:title" content="Cruise Ship Watch — Stay In The Know.">
-  <meta property="og:description" content="Add ships to your watchlist. Get notified about inspections, outbreaks, and travel advisories.">
+  <meta property="og:title" content="Cruise Ship Watch — Smooth sailing for...">
+  <meta property="og:description" content="Add ships to your watchlist. Get notified about travel advisories and sea-state alerts.">
   <meta property="og:url" content="https://cruiseship.watch">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Cruise Ship Watch — Watchlist For Cruisers">
-  <meta name="twitter:description" content="Add ships to your watchlist. Get notified about inspections, outbreaks, and advisories.">
+  <meta name="twitter:title" content="Cruise Ship Watch — Smooth sailing for...">
+  <meta name="twitter:description" content="Add ships to your watchlist. Get notified about advisories and sea-state alerts.">
   <meta name="twitter:image" content="https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png">
   <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogIkNydWlzZSBTaGlwIFdhdGNoIiwgInNob3J0X25hbWUiOiAiQ1ciLCAic3RhcnRfdXJsIjogIi8iLCAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwgImJhY2tncm91bmRfY29sb3IiOiAiIzBhMWEyZSIsICJ0aGVtZV9jb2xvciI6ICIjMDg5MWIyIiwgImljb25zIjogW3sic3JjIjogImh0dHBzOi8vcmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbS9ic3BlbmNlcjQxMy9jcnVpc2VzaGlwLXdhdGNoL21haW4vY3dfaWNvbi5wbmciLCAic2l6ZXMiOiAiNTEyeDUxMiIsICJ0eXBlIjogImltYWdlL3BuZyJ9XX0=">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png">
@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.25';
+const APP_VERSION = '0.1.26';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -149,6 +149,30 @@ const formatWaveHeight = (m) => {
   if (m === null || m === undefined) return '';
   var feet = m * 3.28084;
   return m.toFixed(1) + ' m (' + feet.toFixed(0) + ' ft)';
+};
+
+const cleanAdvisoryText = (raw) => {
+  if (!raw) return '';
+  return String(raw)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8216;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
+    .replace(/&#8211;/g, '-')
+    .replace(/&#8212;/g, '-')
+    .replace(/&#8239;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const truncateWords = (text, max) => {
+  if (!text) return { text: '', truncated: false };
+  var words = text.split(/\s+/);
+  if (words.length <= max) return { text: text, truncated: false };
+  return { text: words.slice(0, max).join(' ') + '...', truncated: true };
 };
 
 const parseRiskChips = (advisory) => {
@@ -453,6 +477,7 @@ function App() {
   const [notifications, setNotifications] = useState([]);
   const [expandedAlertGroups, setExpandedAlertGroups] = useState({});
   const [drawerAdvisoriesExpanded, setDrawerAdvisoriesExpanded] = useState(false);
+  const [expandedAdvisorySummaries, setExpandedAdvisorySummaries] = useState({});
   const [results, setResults] = useState([]);
   const [searched, setSearched] = useState(false);
   const [wikiProfile, setWikiProfile] = useState(null);
@@ -856,6 +881,7 @@ function App() {
   const openWatchlistDrawer = async (watchItem) => {
     const isMemory = watchItem.is_deceased === true || watchItem.is_deceased === 1;
     setDrawerAdvisoriesExpanded(false);
+    setExpandedAdvisorySummaries({});
     setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: null, ssdiResults: [], loading: true, newlyDeceased: false, isMemory: isMemory, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: null, location: watchItem.location || null, advisories: [], marine: [] });
     setSsdiOffset(0); setSsdiHasMore(false); setSsdiAllResults([]);
     setDrawerRefreshing(true);
@@ -1725,8 +1751,22 @@ function App() {
                                       {chips.map(function(chip, i) { return <span key={'mc-' + i} className="px-2 py-0.5 rounded-full text-xs bg-black/40 text-white border border-white/20">{chip}</span>; })}
                                     </div>
                                   )}
-                                  {adv.summary && <p className="text-white/90 text-sm leading-relaxed mb-2 whitespace-pre-line">{String(adv.summary).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}</p>}
-                                  {adv.url && <a href={adv.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline">Read full advisory at travel.state.gov</a>}
+                                  {adv.summary && (() => {
+                                    var advKey = 'mem-' + (adv.country_code || idx);
+                                    var clean = cleanAdvisoryText(adv.summary);
+                                    var isExp = !!expandedAdvisorySummaries[advKey];
+                                    var trunc = truncateWords(clean, 250);
+                                    var bodyText = isExp || !trunc.truncated ? clean : trunc.text;
+                                    return (
+                                      <>
+                                        <p className="text-white/95 text-base leading-relaxed mb-2 whitespace-pre-line">{bodyText}</p>
+                                        {trunc.truncated && (
+                                          <button onClick={() => setExpandedAdvisorySummaries(Object.assign({}, expandedAdvisorySummaries, { [advKey]: !isExp }))} className="w-full py-2 mb-2 bg-white/10 border border-white/30 text-white rounded-lg text-base font-semibold">{isExp ? 'Show less' : 'Show more'}</button>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                  {adv.url && <a href={adv.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline">Reference: travel.state.gov</a>}
                                 </div>
                               </div>
                             );
@@ -1846,8 +1886,22 @@ function App() {
                                       {chips.map(function(chip, i) { return <span key={'c-' + i} className="px-2 py-0.5 rounded-full text-xs bg-black/40 text-white border border-white/20">{chip}</span>; })}
                                     </div>
                                   )}
-                                  {adv.summary && <p className="text-white/90 text-sm leading-relaxed mb-2 whitespace-pre-line">{String(adv.summary).replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}</p>}
-                                  {adv.url && <a href={adv.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline">Read full advisory at travel.state.gov</a>}
+                                  {adv.summary && (() => {
+                                    var advKey = 'wl-' + (adv.country_code || idx);
+                                    var clean = cleanAdvisoryText(adv.summary);
+                                    var isExp = !!expandedAdvisorySummaries[advKey];
+                                    var trunc = truncateWords(clean, 250);
+                                    var bodyText = isExp || !trunc.truncated ? clean : trunc.text;
+                                    return (
+                                      <>
+                                        <p className="text-white/95 text-base leading-relaxed mb-2 whitespace-pre-line">{bodyText}</p>
+                                        {trunc.truncated && (
+                                          <button onClick={() => setExpandedAdvisorySummaries(Object.assign({}, expandedAdvisorySummaries, { [advKey]: !isExp }))} className="w-full py-2 mb-2 bg-white/10 border border-white/30 text-white rounded-lg text-base font-semibold">{isExp ? 'Show less' : 'Show more'}</button>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                  {adv.url && <a href={adv.url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline">Reference: travel.state.gov</a>}
                                 </div>
                               </div>
                             );
@@ -2027,18 +2081,19 @@ function App() {
         {page === 'search' && (() => {
           var SEARCH_PT = isPhone ? '42vh' : isTablet ? '40vh' : '38vh';
           return (
-          <div className="space-y-3" style={{ paddingTop: SEARCH_PT }}>
+          <div className="space-y-3" style={{ paddingTop: SEARCH_PT, paddingBottom: '7rem' }}>
             <div className="flex flex-col items-center justify-center" style={{ height: SEARCH_PT, marginTop: '-' + SEARCH_PT, paddingTop: '0.5rem', paddingBottom: '0', pointerEvents: 'none' }}>
               <img src={CW_LOGO} alt="Cruise Ship Watch" onError={(e) => { e.target.style.display = 'none'; }} style={{ width: 'auto', height: 'calc(' + SEARCH_PT + ' - 4rem)', maxWidth: '95%', objectFit: 'contain', filter: 'drop-shadow(0 6px 24px rgba(8,145,178,0.9)) brightness(2.0)' }} />
               <p className="text-cyan-300 font-bold italic text-center" style={{ fontSize: isPhone ? '2.2rem' : '2.6rem', whiteSpace: 'nowrap', textShadow: '0 2px 10px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.8)', marginTop: '0.4rem' }}>Smooth sailing for...</p>
-              <p className="text-cyan-200 text-center" style={{ fontSize: isPhone ? '1.55rem' : '1.75rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', marginTop: '0.4rem', lineHeight: '1.25' }}>Travel advisories and sea-state alerts</p>
             </div>
-            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 6rem)' }}>
+            {!watchlistChecked && !watchlistChecking && (
+              <p className="text-cyan-200 text-center px-2" style={{ fontSize: isPhone ? '1.55rem' : '1.75rem', textShadow: '0 1px 6px rgba(0,0,0,0.9)', lineHeight: '1.25' }}>Enter the Ship, Line and Cruise Region, then tap <span className="font-bold">Find My Ship</span>.</p>
+            )}
+            <div className={cardClass} style={{ overflowY: 'auto', maxHeight: 'calc(100dvh - ' + SEARCH_PT + ' - 12rem)' }}>
               <div className="mb-1 pb-1 border-b border-cyan-900/30" />
               {watchlistChecking && <p className="text-white text-center py-4 animate-pulse text-xl">Searching...</p>}
               {!watchlistChecked ? (
                 <div className="space-y-3">
-                  <p className="text-cyan-100 text-lg text-center leading-snug">Enter the Ship, Line and Cruise Region, then tap <span className="font-bold">Find My Ship</span>.</p>
                   <ClearableInput value={nw.name} onChange={(e) => {
                     const val = e.target.value;
                     const words = val.split(' ');
@@ -2203,7 +2258,7 @@ function App() {
               <p className="text-cyan-200 text-2xl font-bold italic mb-3">Smooth sailing for...</p>
               <div className="space-y-3 text-gray-200 text-xl leading-relaxed">
                 <p>Cruise ships you've sailed. Ships you're booked on. Ships you're curious about.</p>
-                <p>"Google it," they say. But cruise news is scattered, and the things that matter to cruisers -- inspections, outbreaks, advisories -- are buried.</p>
+                <p>"Google it," they say. But cruise news is scattered, and the things that matter to cruisers -- travel advisories and sea-state alerts -- are buried.</p>
                 <p>So we built Cruise Ship Watch to help you stay in the know -- a simple way to follow ships you care about and get the news that matters before you sail.</p>
                 <p>Cruise Ship Watch monitors public information about ships, not passengers or crew. No ads. No subscriptions. Just useful answers.</p>
               </div>
@@ -2212,7 +2267,7 @@ function App() {
               <h3 className="text-white text-2xl font-bold mb-4 text-center">How it works</h3>
               <div className="space-y-4">
                 <div className="flex gap-3 items-start"><span className="text-cyan-400 text-2xl font-black w-7 shrink-0">1.</span><p className="text-gray-300 text-xl">Enter a ship name to find it in public records.</p></div>
-                <div className="flex gap-3 items-start"><span className="text-cyan-400 text-2xl font-black w-7 shrink-0">2.</span><p className="text-gray-300 text-xl">Add a ship to your Watchlist to get Alerts when there's news -- inspections, outbreaks, or advisories.</p></div>
+                <div className="flex gap-3 items-start"><span className="text-cyan-400 text-2xl font-black w-7 shrink-0">2.</span><p className="text-gray-300 text-xl">Add a ship to your Watchlist to get Alerts when there's news -- travel advisories or sea-state warnings.</p></div>
                 <div className="flex gap-3 items-start"><span className="text-cyan-400 text-2xl font-black w-7 shrink-0">3.</span><p className="text-gray-300 text-xl">Save ships you care about to My Ships for future reference.</p></div>
                 <div className="flex gap-3 items-start"><span className="text-cyan-400 text-2xl font-black w-7 shrink-0">4.</span><p className="text-gray-300 text-xl">Cruise Ship Watch is free. Premium features may include one-time upgrades.</p></div>
               </div>
@@ -2220,7 +2275,7 @@ function App() {
             <div className={cardClass}>
               <h3 className="text-white text-2xl font-bold mb-3">About Alerts</h3>
               <div className="space-y-2 text-gray-200 text-xl leading-relaxed">
-                <p>Your Watchlist follows ships you care about. We check public records and notify you when something new appears -- a CDC inspection result, an outbreak report, or a State Department advisory affecting the ship's region.</p>
+                <p>Your Watchlist follows ships you care about. We check public records and notify you when something new appears -- a State Department advisory or a National Weather Service marine forecast affecting the ship's region. Save ships you've sailed or want to remember to <strong className="text-white">My Ships</strong> for future reference.</p>
                 <p><strong className="text-white">View</strong> -- see the latest information.</p>
                 <p><strong className="text-white">Keep</strong> -- save this ship to My Ships.</p>
                 <p><strong className="text-white">Dismiss</strong> -- remove this alert.</p>
