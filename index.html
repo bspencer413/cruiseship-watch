@@ -54,7 +54,7 @@ const API_BASE = 'https://cruiseship-watch-backend.onrender.com';
 const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.21';
+const APP_VERSION = '0.1.22';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -136,6 +136,19 @@ const advisoryLevelStyle = (level) => {
   if (lv === 3) return { border: '#ea580c', headerBg: '#9a3412', cardBg: 'rgba(124,45,18,0.35)', label: 'Reconsider Travel' };
   if (lv === 2) return { border: '#ca8a04', headerBg: '#854d0e', cardBg: 'rgba(113,63,18,0.35)', label: 'Increased Caution' };
   return { border: '#16a34a', headerBg: '#166534', cardBg: 'rgba(20,83,45,0.35)', label: 'Normal Precautions' };
+};
+
+const seaStateStyle = (state) => {
+  if (state === 'rough')    return { border: '#dc2626', headerBg: '#991b1b', cardBg: 'rgba(127,29,29,0.35)', face: '😨', label: 'Rough Seas' };
+  if (state === 'moderate') return { border: '#ca8a04', headerBg: '#854d0e', cardBg: 'rgba(113,63,18,0.35)', face: '😐', label: 'Moderate Seas' };
+  if (state === 'calm')     return { border: '#16a34a', headerBg: '#166534', cardBg: 'rgba(20,83,45,0.35)', face: '😊', label: 'Calm Seas' };
+  return { border: '#475569', headerBg: '#334155', cardBg: 'rgba(30,41,59,0.35)', face: '🌊', label: 'Sea State Unknown' };
+};
+
+const formatWaveHeight = (m) => {
+  if (m === null || m === undefined) return '';
+  var feet = m * 3.28084;
+  return m.toFixed(1) + ' m (' + feet.toFixed(0) + ' ft)';
 };
 
 const parseRiskChips = (advisory) => {
@@ -840,7 +853,7 @@ function App() {
 
   const openWatchlistDrawer = async (watchItem) => {
     const isMemory = watchItem.is_deceased === true || watchItem.is_deceased === 1;
-    setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: null, ssdiResults: [], loading: true, newlyDeceased: false, isMemory: isMemory, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: null, location: watchItem.location || null, advisories: [] });
+    setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: null, ssdiResults: [], loading: true, newlyDeceased: false, isMemory: isMemory, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: null, location: watchItem.location || null, advisories: [], marine: [] });
     setSsdiOffset(0); setSsdiHasMore(false); setSsdiAllResults([]);
     setDrawerRefreshing(true);
     const token = localStorage.getItem('cw_token');
@@ -854,11 +867,16 @@ function App() {
       var memProfile = await resolveShipProfile(watchItem.name, null, 'drawer');
       const cachedSsdi = getCachedSsdiFlexible(watchItem.name);
       var memAdvisories = [];
+      var memMarine = [];
       try {
         const advResp = await fetch(API_BASE + '/watchlist/' + watchItem.id + '/advisories', { headers: { 'Authorization': 'Bearer ' + token } });
         if (advResp.ok) { const advData = await advResp.json(); memAdvisories = Array.isArray(advData) ? advData : (advData && advData.advisories) || []; }
       } catch(e) {}
-      setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: memProfile, ssdiResults: [], loading: false, newlyDeceased: false, isMemory: true, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: cachedSsdi, location: watchItem.location || null, advisories: memAdvisories });
+      try {
+        const marResp = await fetch(API_BASE + '/watchlist/' + watchItem.id + '/marine', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (marResp.ok) { const marData = await marResp.json(); memMarine = (marData && marData.marine) || []; }
+      } catch(e) {}
+      setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: memProfile, ssdiResults: [], loading: false, newlyDeceased: false, isMemory: true, deathYear: watchItem.death_year || null, dob: watchItem.dob || null, cachedSsdi: cachedSsdi, location: watchItem.location || null, advisories: memAdvisories, marine: memMarine });
       setDrawerRefreshing(false);
       return;
     }
@@ -883,11 +901,16 @@ function App() {
     }
     setSsdiAllResults(ssdiResults);
     var advisories = [];
+    var marine = [];
     try {
       const advResp = await fetch(API_BASE + '/watchlist/' + watchItem.id + '/advisories', { headers: { 'Authorization': 'Bearer ' + token } });
       if (advResp.ok) { const advData = await advResp.json(); advisories = Array.isArray(advData) ? advData : (advData && advData.advisories) || []; }
     } catch(e) {}
-    setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: wikiProfile, ssdiResults, loading: false, newlyDeceased: false, isMemory: false, deathYear: null, dob: watchItem.dob || null, cachedSsdi: null, location: watchItem.location || null, advisories: advisories });
+    try {
+      const marResp = await fetch(API_BASE + '/watchlist/' + watchItem.id + '/marine', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (marResp.ok) { const marData = await marResp.json(); marine = (marData && marData.marine) || []; }
+    } catch(e) {}
+    setDrawerData({ name: watchItem.name, watchlistId: watchItem.id, profile: wikiProfile, ssdiResults, loading: false, newlyDeceased: false, isMemory: false, deathYear: null, dob: watchItem.dob || null, cachedSsdi: null, location: watchItem.location || null, advisories: advisories, marine: marine });
     setDrawerRefreshing(false);
   };
 
@@ -1170,7 +1193,7 @@ function App() {
           )}
           <div className="p-2 bg-cyan-900/20 border border-cyan-800/20 rounded-xl">
             <p className="text-gray-400 text-sm mb-1">Based on publicly available sources.</p>
-            <p className="text-cyan-200 text-sm">Data sourced from Wikipedia, the U.S. CDC Vessel Sanitation Program, and the U.S. State Department.</p>
+            <p className="text-cyan-200 text-sm">Data sourced from the U.S. State Department, the U.S. National Weather Service, and Wikipedia.</p>
           </div>
         </div>
       </div>
@@ -1618,7 +1641,7 @@ function App() {
 
   const WikiDrawer = () => {
     if (!drawerData) return null;
-    const { name, profile, ssdiResults, loading: drawerLoading, newlyDeceased, isMemory, deathYear, dob, cachedSsdi, location, advisories } = drawerData;
+    const { name, profile, ssdiResults, loading: drawerLoading, newlyDeceased, isMemory, deathYear, dob, cachedSsdi, location, advisories, marine } = drawerData;
     const noWikiInfo = !drawerLoading && (!profile || profile.notFound || (!profile.title && !profile.extract));
     const nameParts = name.trim().split(/\s+/);
     const drawerFirst = nameParts[0] || '';
@@ -1642,6 +1665,25 @@ function App() {
                       <p className="text-white font-black text-3xl">{name}</p>
                       <p className="text-white/80 text-xl">{deathYear ? 'Retired' : 'Saved'}</p>
                     </div>
+                    {marine && marine.length > 0 && marine.map(function(m, idx) {
+                      const ss = seaStateStyle(m.sea_state);
+                      return (
+                        <div key={'memmar-' + idx} className="rounded-xl mb-3 overflow-hidden border-2" style={{ borderColor: ss.border, backgroundColor: ss.cardBg }}>
+                          <div className="px-3 py-2 flex items-center justify-between" style={{ backgroundColor: ss.headerBg }}>
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-white font-bold text-xl leading-tight truncate">{m.area_name}</p>
+                              <p className="text-white/80 text-xs">{ss.label}{m.max_wave_m != null ? ' — seas to ' + formatWaveHeight(m.max_wave_m) : ''}</p>
+                            </div>
+                            <span className="text-3xl shrink-0">{ss.face}</span>
+                          </div>
+                          <div className="p-3">
+                            {m.issued_at && <p className="text-white/70 text-xs mb-2">Issued {m.issued_at}</p>}
+                            {m.raw_text && <pre className="text-white/85 text-xs leading-snug whitespace-pre-wrap font-mono max-h-64 overflow-y-auto bg-black/30 p-2 rounded">{m.raw_text}</pre>}
+                            {m.source_url && <a href={m.source_url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline mt-2 inline-block">Read full forecast at NOAA</a>}
+                          </div>
+                        </div>
+                      );
+                    })}
                     {advisories && advisories.length > 0 && advisories.map(function(adv, idx) {
                       const ls = advisoryLevelStyle(adv.level);
                       const chips = parseRiskChips(adv);
@@ -1717,6 +1759,25 @@ function App() {
                 )}
                 {!isMemory && (
                   <>
+                    {marine && marine.length > 0 && marine.map(function(m, idx) {
+                      const ss = seaStateStyle(m.sea_state);
+                      return (
+                        <div key={'mar-' + idx} className="rounded-xl mb-3 overflow-hidden border-2" style={{ borderColor: ss.border, backgroundColor: ss.cardBg }}>
+                          <div className="px-3 py-2 flex items-center justify-between" style={{ backgroundColor: ss.headerBg }}>
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-white font-bold text-xl leading-tight truncate">{m.area_name}</p>
+                              <p className="text-white/80 text-xs">{ss.label}{m.max_wave_m != null ? ' — seas to ' + formatWaveHeight(m.max_wave_m) : ''}</p>
+                            </div>
+                            <span className="text-3xl shrink-0">{ss.face}</span>
+                          </div>
+                          <div className="p-3">
+                            {m.issued_at && <p className="text-white/70 text-xs mb-2">Issued {m.issued_at}</p>}
+                            {m.raw_text && <pre className="text-white/85 text-xs leading-snug whitespace-pre-wrap font-mono max-h-64 overflow-y-auto bg-black/30 p-2 rounded">{m.raw_text}</pre>}
+                            {m.source_url && <a href={m.source_url} target="_blank" rel="noopener noreferrer" className="text-cyan-300 text-sm underline mt-2 inline-block">Read full forecast at NOAA</a>}
+                          </div>
+                        </div>
+                      );
+                    })}
                     {advisories && advisories.length > 0 && advisories.map(function(adv, idx) {
                       const ls = advisoryLevelStyle(adv.level);
                       const chips = parseRiskChips(adv);
@@ -1925,46 +1986,37 @@ function App() {
                     const words = val.split(' ');
                     const capped = words.map((w, i) => i < words.length - 1 ? toTitleCase(w) : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
                     setNw(Object.assign({}, nw, { name: capped }));
-                  }} onBlur={(e) => setNw(Object.assign({}, nw, { name: smartTitleCase(e.target.value.trim()) }))} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Ship Name (e.g., Scarlet Lady)" inputClass={iClass} />
+                  }} onBlur={(e) => setNw(Object.assign({}, nw, { name: smartTitleCase(e.target.value.trim()) }))} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Ship Name" inputClass={iClass} />
+                  <p className="text-cyan-300/70 text-xs text-center -mt-1">Partial names accepted</p>
+                  <ClearableInput value={nw.middle} onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }} onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Cruise Line (optional)" inputClass={iClass} />
+                  <div className="relative">
+                    <select
+                      value={nw.location || ''}
+                      onChange={(e) => setNw(Object.assign({}, nw, { location: e.target.value }))}
+                      className={iClass + ' pr-10 cursor-pointer'}
+                      style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
+                    >
+                      <option value="" style={{ color: '#9ca3af', backgroundColor: '#0c1e3a' }}>Region (for advisories & sea state)</option>
+                      <option value="Caribbean" style={{ backgroundColor: '#0c1e3a' }}>Caribbean</option>
+                      <option value="Mediterranean" style={{ backgroundColor: '#0c1e3a' }}>Mediterranean</option>
+                      <option value="North America" style={{ backgroundColor: '#0c1e3a' }}>North America</option>
+                      <option value="Northern Europe" style={{ backgroundColor: '#0c1e3a' }}>Northern Europe</option>
+                      <option value="Central America" style={{ backgroundColor: '#0c1e3a' }}>Central America</option>
+                      <option value="South America" style={{ backgroundColor: '#0c1e3a' }}>South America</option>
+                      <option value="Asia" style={{ backgroundColor: '#0c1e3a' }}>Asia</option>
+                      <option value="Oceania" style={{ backgroundColor: '#0c1e3a' }}>Oceania</option>
+                      <option value="Middle East" style={{ backgroundColor: '#0c1e3a' }}>Middle East</option>
+                      <option value="Africa" style={{ backgroundColor: '#0c1e3a' }}>Africa</option>
+                      <option value="Arctic" style={{ backgroundColor: '#0c1e3a' }}>Arctic</option>
+                    </select>
+                    <svg className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
                   <button id="cw-search-btn" onFocus={() => { setTimeout(() => { var el = document.getElementById('cw-search-btn'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 350); }} onClick={() => checkWatch()} disabled={watchlistChecking} className="w-full py-3 bg-cyan-600 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 text-2xl font-bold">
-                    <SearchIcon /> {watchlistChecking ? 'Searching...' : 'Find Out'}
+                    <SearchIcon /> {watchlistChecking ? 'Searching...' : 'Find My Ship'}
                   </button>
-                  {!showMoreFields && (
-                    <>
-                      <button onClick={() => setShowMoreFields(true)} className="w-full py-2 bg-gray-800/60 border border-cyan-900/30 text-cyan-400 text-xl text-center rounded-lg">Add more details</button>
-                      <p className="text-cyan-300/70 text-sm text-center -mt-1">For State Dept advisory alerts, add a Region in details.</p>
-                    </>
-                  )}
-                  {showMoreFields && (
-                    <>
-                      <ClearableInput value={nw.middle} onChange={(e) => { var v = e.target.value; if (v.length >= 1) v = v.charAt(0).toUpperCase() + v.slice(1); setNw(Object.assign({}, nw, { middle: v })); }} onBlur={(e) => { var v = e.target.value.trim(); setNw(Object.assign({}, nw, { middle: v.length === 1 ? v.toUpperCase() : v })); }} onKeyPress={(e) => e.key === 'Enter' && checkWatch()} placeholder="Cruise Line" inputClass={iClass} />
-                      <div className="relative">
-                        <select
-                          value={nw.location || ''}
-                          onChange={(e) => setNw(Object.assign({}, nw, { location: e.target.value }))}
-                          className={iClass + ' pr-10 cursor-pointer'}
-                          style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
-                        >
-                          <option value="" style={{ color: '#9ca3af', backgroundColor: '#0c1e3a' }}>Region (for State Dept alerts)</option>
-                          <option value="Caribbean" style={{ backgroundColor: '#0c1e3a' }}>Caribbean</option>
-                          <option value="Mediterranean" style={{ backgroundColor: '#0c1e3a' }}>Mediterranean</option>
-                          <option value="North America" style={{ backgroundColor: '#0c1e3a' }}>North America</option>
-                          <option value="Northern Europe" style={{ backgroundColor: '#0c1e3a' }}>Northern Europe</option>
-                          <option value="Central America" style={{ backgroundColor: '#0c1e3a' }}>Central America</option>
-                          <option value="South America" style={{ backgroundColor: '#0c1e3a' }}>South America</option>
-                          <option value="Asia" style={{ backgroundColor: '#0c1e3a' }}>Asia</option>
-                          <option value="Oceania" style={{ backgroundColor: '#0c1e3a' }}>Oceania</option>
-                          <option value="Middle East" style={{ backgroundColor: '#0c1e3a' }}>Middle East</option>
-                          <option value="Africa" style={{ backgroundColor: '#0c1e3a' }}>Africa</option>
-                          <option value="Arctic" style={{ backgroundColor: '#0c1e3a' }}>Arctic</option>
-                        </select>
-                        <svg className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </>
-                  )}
-                  <p className="text-gray-400 text-sm text-center">Results from publicly available sources.</p>
+                  <p className="text-gray-400 text-sm text-center">We use authoritative sources: U.S. State Department, U.S. National Weather Service, and Wikipedia.</p>
                 </div>
               ) : (
                 <WatchlistCheckCard />
@@ -2116,7 +2168,7 @@ function App() {
               <div className="space-y-3 text-gray-200 text-xl leading-relaxed">
                 <p><strong className="text-white">We collect:</strong> your email address, ship watchlist, search queries, and anonymous usage data.</p>
                 <p><strong className="text-white">How we use it:</strong> We do not sell your personal information. Ever.</p>
-                <p><strong className="text-white">Data sources:</strong> Information is based on publicly available sources, including Wikipedia, the U.S. CDC Vessel Sanitation Program, and the U.S. State Department.</p>
+                <p><strong className="text-white">Data sources:</strong> Information is based on publicly available sources from the U.S. State Department, the U.S. National Weather Service, and Wikipedia.</p>
                 <p><strong className="text-white">Your rights:</strong> You may delete your account and all associated data at any time.</p>
                 <p><strong className="text-white">Vessel scope:</strong> Cruise Ship Watch tracks vessels, not individuals. We do not collect or store information about passengers or crew.</p>
                 <p><strong className="text-white">Disclaimer:</strong> Information is based on publicly available sources. It may not be complete or up to date. Cruise Ship Watch does not provide real-time vessel tracking; we focus on news and conditions affecting cruisers.</p>
