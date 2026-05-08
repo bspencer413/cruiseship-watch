@@ -55,7 +55,7 @@ const CW_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/ma
 const CW_LOGIN_BG = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cruise_login_bg.jpg';
 const CW_LOGO = 'https://raw.githubusercontent.com/bspencer413/cruiseship-watch/main/cw_icon.png';
 const BILL_PHOTO = 'https://raw.githubusercontent.com/bspencer413/memorial-watch/main/Bill.jpeg';
-const APP_VERSION = '0.1.42';
+const APP_VERSION = '0.1.43';
 const DECEASED_BIRTH_YEAR_THRESHOLD = new Date().getFullYear() - 100;
 const SSDI_CACHE_KEY = 'cw_ssdi_cache';
 
@@ -2294,6 +2294,16 @@ function App() {
                 <a href="mailto:hello@cruiseship.watch" className="text-cyan-400 text-xl">hello@cruiseship.watch</a>
               </div>
             </div>
+            {/* Try our other Watchlist apps */}
+            <div className={cardClass}>
+              <h3 className="text-white text-2xl font-bold mb-3 text-center">Try our other Watchlist apps</h3>
+              <div className="space-y-3">
+                <a href="https://3brains.app" target="_blank" rel="noopener noreferrer"
+                  className="block w-full py-4 bg-cyan-700 hover:bg-cyan-800 text-white text-center rounded-xl text-xl font-semibold">
+                  Visit Our Site
+                </a>
+              </div>
+            </div>
             <div className="px-1 space-y-3 pb-2">
               <div className="p-3 bg-black/30 rounded-xl"><p className="font-medium text-gray-200 text-xl text-center">{user && user.email}</p></div>
               <button onClick={doLogout} className="w-full py-4 bg-cyan-700 hover:bg-cyan-800 text-white rounded-xl text-2xl font-bold">Sign Out</button>
@@ -2347,5 +2357,9 @@ function App() {
 
 ReactDOM.render(React.createElement(App), document.getElementById('root'));
 </script>
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
